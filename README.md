@@ -743,9 +743,3 @@ CS2Guard is an experimental research and educational project.
 A high anomaly or suspicion score does **not** constitute proof that a player is cheating. Legitimate players may exhibit unusual behavior, and any practical anti-cheat system must account for uncertainty and false positives.
 
 CS2Guard is not affiliated with or endorsed by Valve Corporation.
-
----
-
-## 📄 License
-
-License to be determined.
