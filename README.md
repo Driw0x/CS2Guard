@@ -123,16 +123,16 @@ A major objective is to reuse the same behavioral representation and detection m
 
 Build the foundation for extracting structured gameplay data from CS2 demo files.
 
-* [ ] Set up the Python project structure
-* [ ] Integrate a CS2 demo parser
-* [ ] Load and parse `.dem` files
-* [ ] Extract match metadata
-* [ ] Extract players and teams
-* [ ] Extract rounds
-* [ ] Extract tick-level player positions
-* [ ] Extract view angles (yaw / pitch)
-* [ ] Extract weapon information
-* [ ] Extract shots, hits, and kills
+* [x] Set up the Python project structure
+* [x] Integrate a CS2 demo parser
+* [x] Load and parse `.dem` files
+* [x] Extract match metadata
+* [x] Extract players and teams
+* [x] Extract rounds
+* [x] Extract tick-level player positions
+* [x] Extract view angles (yaw / pitch)
+* [x] Extract weapon information
+* [x] Extract shots, hits, and kills
 * [ ] Define normalized `Match`, `Player`, `Round`, `Tick`, and `Event` structures
 * [ ] Add tests for demo parsing
 
