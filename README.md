@@ -133,8 +133,8 @@ Build the foundation for extracting structured gameplay data from CS2 demo files
 * [x] Extract view angles (yaw / pitch)
 * [x] Extract weapon information
 * [x] Extract shots, hits, and kills
-* [ ] Define normalized `Match`, `Player`, `Round`, `Tick`, and `Event` structures
-* [ ] Add tests for demo parsing
+* [x] Define normalized `Match`, `Player`, `Round`, `Tick`, and `Event` structures
+* [x] Add tests for demo parsing
 
 **Milestone result:** A `.dem` file can be converted into structured gameplay data usable by the rest of CS2Guard.
 
