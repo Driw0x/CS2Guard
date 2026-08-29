@@ -144,16 +144,16 @@ Build the foundation for extracting structured gameplay data from CS2 demo files
 
 Transform raw gameplay data into measurable aiming behavior.
 
-* [ ] Compute crosshair direction
-* [ ] Compute crosshair-to-target angular distance
-* [ ] Compute angular velocity
-* [ ] Compute angular acceleration
-* [ ] Detect target acquisition
-* [ ] Measure reaction time
-* [ ] Measure tracking error
-* [ ] Measure aim corrections and overshoot
-* [ ] Detect potential aim snaps
-* [ ] Associate shots with aiming sequences
+* [x] Compute crosshair direction
+* [x] Compute crosshair-to-target angular distance
+* [x] Compute angular velocity
+* [x] Compute angular acceleration
+* [x] Detect target acquisition
+* [x] Measure reaction time
+* [x] Measure tracking error
+* [x] Measure aim corrections and overshoot
+* [x] Detect potential aim snaps
+* [x] Associate shots with aiming sequences
 * [ ] Visualize aim trajectories
 * [ ] Validate features on selected demo sequences
 
@@ -465,6 +465,30 @@ Integrate the detection engine into a CS2 server-side environment.
 ```text
 CS2Guard/
 │
+├── demo_analyzer/
+│   ├── src/
+│   │   └── cs2guard_demo/
+│   │       ├── parser/
+│   │       ├── models/
+│   │       ├── features/
+│   │       │   ├── aim/
+│   │       │   ├── movement/
+│   │       │   ├── combat/
+│   │       │   └── awareness/
+│   │       ├── detection/
+│   │       │   ├── models/
+│   │       │   ├── inference/
+│   │       │   └── scoring/
+│   │       ├── evaluation/
+│   │       ├── visualization/
+│   │       └── utils/
+│   │
+│   ├── scripts/
+│   └── tests/
+│
+├── server_side/
+│   └── .gitkeep
+│
 ├── data/
 │   ├── raw/
 │   ├── processed/
@@ -474,34 +498,14 @@ CS2Guard/
 │   ├── exploration/
 │   └── experiments/
 │
-├── src/
-│   └── cs2guard/
-│       ├── core/
-│       │   ├── game_state/
-│       │   └── events/
-│       │
-│       ├── ingestion/
-│       │   ├── demo/
-│       │   └── server/
-│       │
-│       ├── features/
-│       │   ├── aim/
-│       │   ├── movement/
-│       │   ├── combat/
-│       │   └── awareness/
-│       │
-│       ├── detection/
-│       │   ├── models/
-│       │   ├── inference/
-│       │   └── scoring/
-│       │
-│       ├── evaluation/
-│       └── visualization/
-│
 ├── training/
 ├── models/
-├── tests/
 │
+├── docs/
+│   ├── demo_analyzer_memory.md
+│   └── server_side_memory.md
+│
+├── pytest.ini
 ├── pyproject.toml
 ├── requirements.txt
 └── README.md

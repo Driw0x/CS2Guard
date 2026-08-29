@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "cs2guard"
+version = "0.1.0"
+description = "AI-assisted CS2 demo analysis and server-side anti-cheat project."
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+    "demoparser2",
+    "pandas",
+    "numpy",
+]
+
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+
+[tool.setuptools]
+package-dir = {"" = "demo_analyzer/src"}
+
+
+[tool.setuptools.packages.find]
+where = ["demo_analyzer/src"]

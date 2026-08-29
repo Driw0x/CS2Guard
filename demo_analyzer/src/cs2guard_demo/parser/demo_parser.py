@@ -36,20 +36,23 @@ class DemoParser:
     def get_shots(self):
         shots = self.parser.parse_event("weapon_fire")
 
-        shots = shots[shots["tick"] >= self.match_start_tick]
+        shots = shots[
+            shots["tick"] >= self.match_start_tick
+        ]
 
-        return (
-            shots[
-                [
-                    "tick",
-                    "user_steamid",
-                    "user_name",
-                    "weapon",
-                ]
+        shots = shots[
+            [
+                "tick",
+                "user_steamid",
+                "user_name",
+                "weapon",
             ]
-            .dropna(subset=["user_steamid"])
-            .reset_index(drop=True)
-        )
+        ].dropna()
+
+        shots["tick"] = shots["tick"].astype(int)
+        shots["user_steamid"] = shots["user_steamid"].astype(int)
+
+        return shots.reset_index(drop=True)
 
     def get_hits(self):
         hits = self.parser.parse_event("player_hurt")
