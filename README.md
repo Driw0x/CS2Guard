@@ -115,6 +115,21 @@ Player Suspicion Score
 
 A major objective is to reuse the same behavioral representation and detection models between offline and online analysis whenever possible.
 
+## 📍 Current Status
+
+The offline Demo Analyzer is currently under development.
+
+**Completed milestones:**
+
+- ✅ M1 — Demo Parsing
+- ✅ M2 — Aim Feature Engineering
+
+**Current milestone:**
+
+- 🚧 M3 — Dataset Builder
+
+The server-side real-time anti-cheat component is planned for a later stage of the project.
+
 ---
 
 # 🗺️ Roadmap
@@ -325,37 +340,22 @@ Extend behavioral detection beyond aim to investigate suspicious enemy awareness
 Potential signals include:
 
 * Crosshair alignment with non-visible enemies
-
 * Enemy tracking through geometry
-
 * Prefire timing
-
 * Position anticipation
-
 * Repeated abnormal enemy awareness
 
 * [ ] Determine enemy visibility at each relevant tick
-
 * [ ] Compute crosshair alignment with enemies
-
 * [ ] Detect crosshair tracking of non-visible enemies
-
 * [ ] Analyze pre-aim behavior
-
 * [ ] Analyze prefire timing
-
 * [ ] Account for recently visible enemies
-
 * [ ] Account for teammate information when possible
-
 * [ ] Account for sound-related information when possible
-
 * [ ] Build awareness-related features
-
 * [ ] Define an Awareness Anomaly Score
-
 * [ ] Evaluate false positives on legitimate players
-
 * [ ] Integrate awareness signals into the global suspicion score
 
 The system must account for legitimate information sources such as sound cues, teammate communication, common angles and general game sense.
@@ -460,53 +460,38 @@ Integrate the detection engine into a CS2 server-side environment.
 
 ---
 
-# 🏗️ Planned Architecture
+# 🏗️ Project Architecture
 
 ```text
 CS2Guard/
 │
+├── data/
+│
 ├── demo_analyzer/
+│   ├── scripts/
+│   │   ├── parse_demo.py
+│   │   └── visualize_aim.py
+│   │
 │   ├── src/
 │   │   └── cs2guard_demo/
-│   │       ├── parser/
-│   │       ├── models/
 │   │       ├── features/
-│   │       │   ├── aim/
-│   │       │   ├── movement/
-│   │       │   ├── combat/
-│   │       │   └── awareness/
-│   │       ├── detection/
-│   │       │   ├── models/
-│   │       │   ├── inference/
-│   │       │   └── scoring/
-│   │       ├── evaluation/
-│   │       ├── visualization/
-│   │       └── utils/
+│   │       ├── models/
+│   │       ├── parser/
+│   │       ├── utils/
+│   │       └── visualization/
 │   │
-│   ├── scripts/
 │   └── tests/
-│
-├── server_side/
-│   └── .gitkeep
-│
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── labels/
-│
-├── notebooks/
-│   ├── exploration/
-│   └── experiments/
-│
-├── training/
-├── models/
+│       └── fixtures/
 │
 ├── docs/
 │   ├── demo_analyzer_memory.md
-│   └── server_side_memory.md
+│   └── server_anticheat_memory.md
 │
-├── pytest.ini
+├── server_side/
+│
+├── .gitignore
 ├── pyproject.toml
+├── pytest.ini
 ├── requirements.txt
 └── README.md
 ```
