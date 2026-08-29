@@ -606,8 +606,6 @@ def test_count_aim_corrections_not_enough_samples():
 
 
 def test_count_aim_corrections_invalid_min_change():
-    import pytest
-
     with pytest.raises(ValueError):
         count_aim_corrections(
             [10.0, 5.0, 2.0],
@@ -669,8 +667,6 @@ def test_find_potential_overshoots_empty():
 
 
 def test_find_potential_overshoots_invalid_proximity_threshold():
-    import pytest
-
     with pytest.raises(ValueError):
         find_potential_overshoots(
             [10.0, 2.0, 5.0],
@@ -679,8 +675,6 @@ def test_find_potential_overshoots_invalid_proximity_threshold():
 
 
 def test_find_potential_overshoots_invalid_min_departure():
-    import pytest
-
     with pytest.raises(ValueError):
         find_potential_overshoots(
             [10.0, 2.0, 5.0],
@@ -779,8 +773,6 @@ def test_find_potential_aim_snaps_empty():
 
 
 def test_find_potential_aim_snaps_mismatched_lengths():
-    import pytest
-
     with pytest.raises(ValueError):
         find_potential_aim_snaps(
             [20.0, 3.0],
@@ -790,8 +782,6 @@ def test_find_potential_aim_snaps_mismatched_lengths():
 
 
 def test_find_potential_aim_snaps_invalid_start_threshold():
-    import pytest
-
     with pytest.raises(ValueError):
         find_potential_aim_snaps(
             [20.0, 3.0],
@@ -802,8 +792,6 @@ def test_find_potential_aim_snaps_invalid_start_threshold():
 
 
 def test_find_potential_aim_snaps_invalid_target_threshold():
-    import pytest
-
     with pytest.raises(ValueError):
         find_potential_aim_snaps(
             [20.0, 3.0],
@@ -814,8 +802,6 @@ def test_find_potential_aim_snaps_invalid_target_threshold():
 
 
 def test_find_potential_aim_snaps_invalid_speed():
-    import pytest
-
     with pytest.raises(ValueError):
         find_potential_aim_snaps(
             [20.0, 3.0],
@@ -826,8 +812,6 @@ def test_find_potential_aim_snaps_invalid_speed():
 
 
 def test_find_potential_aim_snaps_invalid_duration():
-    import pytest
-
     with pytest.raises(ValueError):
         find_potential_aim_snaps(
             [20.0, 3.0],
@@ -838,8 +822,6 @@ def test_find_potential_aim_snaps_invalid_duration():
 
 
 def test_find_potential_aim_snaps_rejects_unordered_timestamps():
-    import pytest
-
     with pytest.raises(ValueError):
         find_potential_aim_snaps(
             [20.0, 12.0, 3.0],
@@ -967,8 +949,6 @@ def test_associate_no_sequences():
 
 
 def test_associate_invalid_negative_index():
-    import pytest
-
     with pytest.raises(ValueError):
         associate_shots_with_aim_sequences(
             sequence_windows=[(-1, 2)],
@@ -978,8 +958,6 @@ def test_associate_invalid_negative_index():
 
 
 def test_associate_invalid_end_index():
-    import pytest
-
     with pytest.raises(ValueError):
         associate_shots_with_aim_sequences(
             sequence_windows=[(0, 5)],
@@ -989,8 +967,6 @@ def test_associate_invalid_end_index():
 
 
 def test_associate_start_after_end():
-    import pytest
-
     with pytest.raises(ValueError):
         associate_shots_with_aim_sequences(
             sequence_windows=[(2, 1)],
@@ -1000,8 +976,6 @@ def test_associate_start_after_end():
 
 
 def test_associate_invalid_max_tick_distance():
-    import pytest
-
     with pytest.raises(ValueError):
         associate_shots_with_aim_sequences(
             sequence_windows=[(0, 1)],

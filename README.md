@@ -154,8 +154,8 @@ Transform raw gameplay data into measurable aiming behavior.
 * [x] Measure aim corrections and overshoot
 * [x] Detect potential aim snaps
 * [x] Associate shots with aiming sequences
-* [ ] Visualize aim trajectories
-* [ ] Validate features on selected demo sequences
+* [x] Visualize aim trajectories
+* [x] Validate features on selected demo sequences
 
 **Milestone result:** CS2Guard can represent a player's aiming behavior as numerical features.
 
