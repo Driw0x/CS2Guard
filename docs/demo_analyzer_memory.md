@@ -163,76 +163,172 @@ to:
 
 ## Objective
 
-M2 focuses on transforming raw view-angle data into meaningful **aim-related features**.
+The objective of M2 was to transform the raw view-angle information extracted during M1 into reusable **aim movement features**.
 
-Raw pitch and yaw values alone provide limited information.
-
-The objective is therefore to derive temporal measurements describing **how the player's aim moves over time**.
-
-These features will later contribute to suspicious-behavior analysis.
+Pitch and yaw values describe where a player is looking, but they are not directly sufficient for behavioral analysis. M2 therefore introduces a feature-extraction layer that describes how the player's aim evolves over time.
 
 Conceptually:
 
 ```text
-View angles
-    ↓
-Angle processing
-    ↓
-Aim movement features
-    ↓
-Behavior analysis
+Tick-level view angles
+        ↓
+Angle normalization / deltas
+        ↓
+Angular velocity
+        ↓
+Angular acceleration
+        ↓
+Rolling temporal features
+        ↓
+Aim behavior analysis
 ```
 
-## Features
+These features form the first behavioral feature family of the Demo Analyzer.
+
+## Main Features
 
 ### Angle Processing
 
-Raw view angles must be handled correctly before calculating movement-related features.
+Aim calculations are based on the player's pitch and yaw values extracted from consecutive demo ticks.
 
-This is especially important for yaw because angles wrap around.
+Yaw requires special handling because angles wrap around at the `-180° / +180°` boundary. A transition such as `179° → -179°` must therefore be interpreted as a small rotation rather than a rotation of almost 360°.
 
-For example, a transition around the `-180° / +180°` boundary must not incorrectly appear as an extremely large rotation.
+Normalized angular differences ensure that velocity and acceleration calculations represent the actual aim movement.
 
 ### Angular Velocity
 
-Angular velocity measures how quickly the player's view direction changes over time.
+Angular velocity measures how quickly the player's view direction changes between samples.
 
-It allows CS2Guard to distinguish between slow aim adjustments and rapid rotations.
+Velocity is calculated independently for pitch and yaw, allowing horizontal and vertical aim movements to remain distinguishable.
+
+Conceptually:
+
+```text
+angular velocity = angular displacement / elapsed time
+```
+
+This can describe slow tracking, normal aim corrections, rapid rotations and flick-like movements.
+
+High angular velocity alone is not considered evidence of cheating.
 
 ### Angular Acceleration
 
-Angular acceleration measures how quickly angular velocity itself changes.
+Angular acceleration measures how quickly angular velocity changes over time.
 
-This provides information about sudden changes in aim movement.
+Conceptually:
 
-Large values are not automatically suspicious: rapid mouse movements, flicks, direction changes and the discrete nature of sampled demo data can naturally produce significant acceleration values.
+```text
+angular acceleration = change in angular velocity / elapsed time
+```
 
-The feature must therefore be interpreted in context rather than used as a standalone cheat indicator.
+It helps characterize abrupt changes in aim movement, including the beginning or end of rapid mouse movements.
 
-### Temporal / Rolling Features
+Large acceleration values can occur naturally because of flicks, rapid direction changes, discrete demo sampling and short time intervals. Acceleration is therefore a behavioral feature that must later be interpreted with additional context rather than as a standalone cheat indicator.
 
-Aim behavior can also be analyzed over a window of consecutive samples rather than only between two individual samples.
+### Rolling / Temporal Aim Features
 
-These windows allow later stages to describe short sequences of player behavior.
+Individual tick-to-tick measurements can be noisy and provide only a very local description of player behavior.
 
-The exact interpretation of these windows must take Counter-Strike 2's tick and subtick systems into account.
+M2 therefore also computes rolling statistics over consecutive samples. These temporal features summarize short aim sequences and provide more stable information for later analysis.
 
-## Current Status
+The rolling calculations are designed around demo tick data; their interpretation must remain aware of CS2's tick/subtick recording behavior.
 
-M2 is currently under development.
+## Shot-Centered Aim Sequences
 
-This section should be expanded as each aim feature is implemented and validated.
+For manual validation, M2 can inspect an aim sequence around a selected shot.
 
-For every completed feature, the following should be documented:
+The visualization workflow exposes contextual information such as:
 
-* purpose;
-* mathematical definition;
-* implementation;
-* affected files;
-* edge cases;
-* tests;
-* example output;
-* interpretation for anti-cheat analysis.
+* player;
+* target;
+* weapon;
+* shot tick;
+* hit tick when applicable.
+
+A window around the shot can then be inspected to understand how the player's aim behaved immediately before and after firing.
+
+## Aim Visualization
+
+A dedicated visualization script is used for manual inspection of M2 features.
+
+Responsibilities are separated between:
+
+```text
+scripts/parse_demo.py
+    → M1 parsing / structured demo inspection
+
+scripts/visualize_aim.py
+    → M2 aim feature inspection / visualization
+```
+
+The generated graphs allow the evolution of aim-related values around a selected shot to be inspected visually. They are a development and validation tool rather than a final cheat-detection mechanism.
+
+## Weapon Context
+
+The selected shot sequence also exposes the weapon used by the player.
+
+Weapon names come from demo data. For example, `elite` corresponds to the Dual Berettas.
+
+Weapon context may become useful later because legitimate aim behavior can vary with the weapon and firing situation. At M2, it remains contextual information rather than a suspiciousness criterion.
+
+## Implementation Structure
+
+Aim feature extraction is kept separate from demo ingestion.
+
+Conceptually:
+
+```text
+src/cs2guard/ingestion/demo/
+        ↓
+normalized tick/event data
+        ↓
+src/cs2guard/features/aim/
+        ↓
+aim features
+        ↓
+scripts/visualize_aim.py
+```
+
+This allows feature extraction to be reused later by detection or machine-learning components without depending on visualization code.
+
+## Testing
+
+M2 is covered by automated tests for the aim feature extraction logic.
+
+The tests validate feature calculations independently of a local `.dem` file, keeping the main test suite reproducible and suitable for CI.
+
+A real demo can still be used manually through `visualize_aim.py` for integration and visual validation.
+
+At the end of M2, all automated tests pass.
+
+## Technical Decisions
+
+Important decisions made during M2 include:
+
+* deriving aim features from normalized tick-level data rather than directly from raw parser output;
+* handling angular wrap-around before movement calculations;
+* keeping pitch and yaw movements distinguishable;
+* treating velocity and acceleration as descriptive signals rather than direct cheat indicators;
+* using rolling statistics to provide temporal context;
+* using shot-centered sequences for practical manual inspection;
+* keeping automated tests independent from a committed demo file;
+* keeping `parse_demo.py` focused on M1 and `visualize_aim.py` focused on M2.
+
+## Result
+
+M2 is complete and validated.
+
+CS2Guard can now transform raw view-angle data into structured aim behavior features and inspect those features around gameplay events such as shots and hits.
+
+The Demo Analyzer has progressed from:
+
+> "Where is the player looking?"
+
+to:
+
+> "How is the player's aim moving over time, especially around combat actions?"
+
+These aim features provide the first behavioral signals that can later be combined with other feature families and detection logic to identify suspicious gameplay.
 
 ---
 
