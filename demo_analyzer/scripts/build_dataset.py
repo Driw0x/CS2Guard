@@ -1,159 +1,121 @@
 from pathlib import Path
+import pandas as pd
 
+from cs2guard_demo.dataset.adapters.cs2cd import CS2CDAdapter
+from cs2guard_demo.dataset.adapters.demo import DemoAdapter
 from cs2guard_demo.dataset.builder import DatasetBuilder
+from cs2guard_demo.dataset.schema import validate_aim_feature_schema, validate_event_schema, validate_tick_schema
 
-import json
-
-from cs2guard_demo.dataset.statistics import generate_dataset_statistics
-
-
-DEMO_DIRECTORY = Path("data/raw")
+DEMO_DIRECTORY = Path("data/raw/train_sources/demo")
+CS2CD_DIRECTORY = Path("data/raw/train_sources/cs2cd")
 OUTPUT_DIRECTORY = Path("data/processed")
 
 
-def main() -> None:
+def build_demo_dataset() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     builder = DatasetBuilder()
+    all_events = []
+    all_ticks = []
+    all_windows = []
+    all_features = []
 
-    builder.process_directory(DEMO_DIRECTORY)
+    demo_files = sorted(DEMO_DIRECTORY.glob("*.dem"))
 
-    dataset = builder.build()
-    player_dataset = builder.build_player_samples()
-    temporal_windows = (
-        builder.build_temporal_windows(
-            DEMO_DIRECTORY,
-            window_size=32,
-        )
-    )
-    aim_features = builder.build_aim_features(
-        temporal_windows,
-        tick_rate=64.0,
-    )
-    statistics = generate_dataset_statistics(
-        event_dataset=dataset,
-        player_dataset=player_dataset,
-        temporal_windows=temporal_windows,
-        aim_features=aim_features,
-    )
+    for demo_path in demo_files:
+        print(f"Processing demo: {demo_path.name}")
 
-    print()
-    print("=== DATASET PREVIEW ===")
-    print(dataset.head())
+        adapter = DemoAdapter(demo_path)
+        events = adapter.get_events()
+        ticks = adapter.get_ticks()
+        windows = builder.build_canonical_temporal_windows(ticks, events, window_size=32)
+        features = builder.build_aim_features(windows)
 
-    print()
-    print("=== DATASET SUMMARY ===")
-    print(f"Samples: {len(dataset)}")
-    print(f"Matches: {dataset['match_id'].nunique()}")
-    print(f"Players: {dataset['steamid'].nunique()}")
-    print()
-    print("Events:")
-    print(dataset["event_type"].value_counts())
+        all_events.append(events)
+        all_ticks.append(ticks)
+        all_windows.append(windows)
+        all_features.append(features)
 
-    print()
-    print("=== PLAYER DATASET PREVIEW ===")
-    print(player_dataset.head())
+    return _concat(all_events), _concat(all_ticks), _concat(all_windows), _concat(all_features)
 
-    print()
-    print("=== PLAYER DATASET SUMMARY ===")
-    print(f"Player samples: {len(player_dataset)}")
 
-    OUTPUT_DIRECTORY.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+def build_cs2cd_dataset() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    builder = DatasetBuilder()
+    all_events = []
+    all_ticks = []
+    all_windows = []
+    all_features = []
 
-    output_path = OUTPUT_DIRECTORY / "dataset.csv"
+    for json_path in sorted(CS2CD_DIRECTORY.rglob("*.json")):
+        parquet_path = json_path.with_suffix(".parquet")
 
-    dataset.to_csv(
-        output_path,
-        index=False,
-    )
+        if not parquet_path.exists():
+            print(f"Skipping {json_path.name}: matching parquet file not found.")
+            continue
 
-    print()
-    print(f"Dataset saved to: {output_path}")
+        print(f"Processing CS2CD: {json_path}")
 
-    player_output_path = (
-        OUTPUT_DIRECTORY / "player_dataset.csv"
-    )
+        adapter = CS2CDAdapter(json_path, parquet_path)
+        events = adapter.get_events()
+        ticks = adapter.get_ticks()
+        windows = builder.build_canonical_temporal_windows(ticks, events, window_size=32)
+        features = builder.build_aim_features(windows)
 
-    player_dataset.to_csv(
-        player_output_path,
-        index=False,
-    )
+        all_events.append(events)
+        all_ticks.append(ticks)
+        all_windows.append(windows)
+        all_features.append(features)
 
-    print(
-        f"Player dataset saved to: "
-        f"{player_output_path}"
-    )
+    return _concat(all_events), _concat(all_ticks), _concat(all_windows), _concat(all_features)
 
-    temporal_output_path = (
-        OUTPUT_DIRECTORY
-        / "temporal_windows.csv"
-    )
 
-    temporal_windows.to_csv(
-        temporal_output_path,
-        index=False,
-    )
+def _concat(dataframes: list[pd.DataFrame]) -> pd.DataFrame:
+    dataframes = [dataframe for dataframe in dataframes if not dataframe.empty]
 
-    print()
-    print("=== TEMPORAL WINDOWS SUMMARY ===")
+    if not dataframes:
+        return pd.DataFrame()
 
-    if temporal_windows.empty:
-        print("No temporal windows generated.")
-    else:
-        print(
-            f"Windows: "
-            f"{temporal_windows['window_id'].nunique()}"
-        )
-        print(
-            f"Rows: {len(temporal_windows)}"
-        )
+    return pd.concat(dataframes, ignore_index=True)
 
-    print(
-        f"Temporal windows saved to: "
-        f"{temporal_output_path}"
-    )
 
-    aim_features_output_path = (
-        OUTPUT_DIRECTORY
-        / "aim_features.csv"
-    )
+def main() -> None:
+    demo_events, demo_ticks, demo_windows, demo_features = build_demo_dataset()
+    cs2cd_events, cs2cd_ticks, cs2cd_windows, cs2cd_features = build_cs2cd_dataset()
 
-    aim_features.to_csv(
-        aim_features_output_path,
-        index=False,
-    )
+    events = _concat([demo_events, cs2cd_events])
+    ticks = _concat([demo_ticks, cs2cd_ticks])
+    windows = _concat([demo_windows, cs2cd_windows])
+    features = _concat([demo_features, cs2cd_features])
+
+    if not events.empty:
+        validate_event_schema(events)
+
+    if not ticks.empty:
+        validate_tick_schema(ticks)
+
+    if not features.empty:
+        validate_aim_feature_schema(features)
+
+    OUTPUT_DIRECTORY.mkdir(parents=True, exist_ok=True)
+
+    events.to_csv(OUTPUT_DIRECTORY / "events.csv", index=False)
+    ticks.to_csv(OUTPUT_DIRECTORY / "ticks.csv", index=False)
+    windows.to_csv(OUTPUT_DIRECTORY / "temporal_windows.csv", index=False)
+    features.to_csv(OUTPUT_DIRECTORY / "aim_features.csv", index=False)
 
     print()
-    print("=== AIM FEATURES SUMMARY ===")
+    print("=== CANONICAL DATASET ===")
+    print(f"Sources: {sorted(events['source'].unique()) if not events.empty else []}")
+    print(f"Matches: {events['match_id'].nunique() if not events.empty else 0}")
+    print(f"Players: {events['player_id'].nunique() if not events.empty else 0}")
+    print(f"Events: {len(events)}")
+    print(f"Ticks: {len(ticks)}")
+    print(f"Windows: {windows['window_id'].nunique() if not windows.empty else 0}")
+    print(f"Aim features: {len(features)}")
 
-    if aim_features.empty:
-        print("No aim features generated.")
-    else:
-        print(
-            f"Feature samples: "
-            f"{len(aim_features)}"
-        )
-        print(
-            f"Matches: "
-            f"{aim_features['match_id'].nunique()}"
-        )
-        print(
-            f"Players: "
-            f"{aim_features['steamid'].nunique()}"
-        )
-
-    print(
-        f"Aim features saved to: "
-        f"{aim_features_output_path}"
-    )
-
-    statistics_output_path = OUTPUT_DIRECTORY / "dataset_statistics.json"
-
-    with statistics_output_path.open("w", encoding="utf-8") as file:
-        json.dump(statistics, file, indent=4, ensure_ascii=False)
-
-    print(f"Dataset statistics saved to: {statistics_output_path}")
+    print()
+    print(f"Events saved to: {OUTPUT_DIRECTORY / 'events.csv'}")
+    print(f"Ticks saved to: {OUTPUT_DIRECTORY / 'ticks.csv'}")
+    print(f"Temporal windows saved to: {OUTPUT_DIRECTORY / 'temporal_windows.csv'}")
+    print(f"Aim features saved to: {OUTPUT_DIRECTORY / 'aim_features.csv'}")
 
 
 if __name__ == "__main__":

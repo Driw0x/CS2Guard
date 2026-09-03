@@ -191,8 +191,8 @@ Create a reproducible pipeline for generating machine-learning-ready datasets fr
 * [x] Create train / validation / test splits
 * [x] Prevent data leakage between matches and players
 * [x] Generate dataset statistics
-* [ ] Define a canonical CS2Guard dataset schema
-* [ ] Support and normalize external datasets such as CS2CD to the canonical schema
+* [x] Define a canonical CS2Guard dataset schema
+* [x] Support and normalize external datasets such as CS2CD to the canonical schema
 
 **Milestone result:** A collection of CS2 demos and external data sources can automatically be transformed into a clean, standardized ML dataset.
 
