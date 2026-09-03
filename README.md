@@ -180,19 +180,29 @@ Transform raw gameplay data into measurable aiming behavior.
 
 Create a reproducible pipeline for generating machine-learning-ready datasets from multiple matches.
 
-* [ ] Process multiple demo files automatically
-* [ ] Generate event-level samples
-* [ ] Generate player-level samples
-* [ ] Generate temporal windows
-* [ ] Store extracted features
-* [ ] Handle missing or invalid data
-* [ ] Normalize numerical features
-* [ ] Add support for legitimate / suspicious labels
-* [ ] Create train / validation / test splits
-* [ ] Prevent data leakage between matches and players
-* [ ] Generate dataset statistics
+* [x] Process multiple demo files automatically
+* [x] Generate event-level samples
+* [x] Generate player-level samples
+* [x] Generate temporal windows
+* [x] Store extracted features
+* [x] Handle missing or invalid data
+* [x] Normalize numerical features
+* [x] Add support for legitimate / suspicious labels
+* [x] Create train / validation / test splits
+* [x] Prevent data leakage between matches and players
+* [x] Generate dataset statistics
+* [ ] Define a canonical CS2Guard dataset schema
+* [ ] Support and normalize external datasets such as CS2CD to the canonical schema
 
-**Milestone result:** A collection of CS2 demos can automatically be transformed into a clean ML dataset.
+**Milestone result:** A collection of CS2 demos and external data sources can automatically be transformed into a clean, standardized ML dataset.
+
+### External Datasets
+
+CS2Guard supports the integration of external Counter-Strike 2 datasets through adapters that convert source-specific data into the canonical CS2Guard dataset representation.
+
+The first external dataset being integrated is **CS2CD**, which provides anonymized gameplay data and player-level cheat labels.
+
+See [`docs/datasets/cs2cd.md`](docs/datasets/cs2cd.md) for integration details, data mapping, labeling strategy, and known limitations.
 
 ---
 

@@ -25,13 +25,7 @@ from cs2guard_demo.visualization.aim import (
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 
-DEMO_PATH = (
-    ROOT_DIR
-    / "data"
-    / "raw"
-    / "demos"
-    / "test.dem"
-)
+DEMO_PATH = Path("data/raw/test.dem")
 
 
 # Player state snapshots currently come from parse_ticks().

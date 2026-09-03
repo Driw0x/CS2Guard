@@ -5,13 +5,7 @@ from cs2guard_demo.parser.demo_parser import DemoParser
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 
-DEMO_PATH = (
-    ROOT_DIR
-    / "data"
-    / "raw"
-    / "demos"
-    / "test.dem"
-)
+DEMO_PATH = Path("data/raw/test.dem")
 
 
 def main():
