@@ -1,31 +1,21 @@
 import math
-
 import pandas as pd
-
-
-AIM_FEATURE_COLUMNS = [
-    "mean_angular_speed",
-    "max_angular_speed",
-    "std_angular_speed",
-    "mean_angular_acceleration",
-    "max_angular_acceleration",
-    "std_angular_acceleration",
-]
+AIM_FEATURE_COLUMNS = ['mean_angular_speed', 'max_angular_speed', 'std_angular_speed', 'mean_angular_acceleration', 'max_angular_acceleration', 'std_angular_acceleration']
 
 
 def fit_normalization_stats(dataset: pd.DataFrame, columns: list[str]) -> dict[str, dict[str, float]]:
     if dataset.empty:
-        raise ValueError("Cannot fit normalization on an empty dataset.")
+        raise ValueError('Cannot fit normalization on an empty dataset.')
 
     missing_columns = [column for column in columns if column not in dataset.columns]
 
     if missing_columns:
-        raise ValueError(f"Missing normalization columns: {missing_columns}")
+        raise ValueError(f'Missing normalization columns: {missing_columns}')
 
     stats = {}
 
     for column in columns:
-        values = pd.to_numeric(dataset[column], errors="coerce")
+        values = pd.to_numeric(dataset[column], errors='coerce')
 
         if values.isna().any():
             raise ValueError(f"Column '{column}' contains invalid values.")
@@ -36,10 +26,7 @@ def fit_normalization_stats(dataset: pd.DataFrame, columns: list[str]) -> dict[s
         if not math.isfinite(mean) or not math.isfinite(std):
             raise ValueError(f"Column '{column}' contains non-finite values.")
 
-        stats[column] = {
-            "mean": mean,
-            "std": std,
-        }
+        stats[column] = {'mean': mean, 'std': std}
 
     return stats
 
@@ -49,10 +36,10 @@ def normalize_features(dataset: pd.DataFrame, stats: dict[str, dict[str, float]]
 
     for column, column_stats in stats.items():
         if column not in normalized.columns:
-            raise ValueError(f"Missing normalization column: {column}")
+            raise ValueError(f'Missing normalization column: {column}')
 
-        mean = column_stats["mean"]
-        std = column_stats["std"]
+        mean = column_stats['mean']
+        std = column_stats['std']
 
         if std == 0.0:
             normalized[column] = 0.0
