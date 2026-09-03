@@ -13,7 +13,7 @@ Its purpose is not to replace the main `README.md`, but to provide a more detail
 * how the implementation was tested;
 * what technical decisions were made along the way.
 
-The Demo Analyzer corresponds to the **v1.x** development phase of CS2Guard.
+The Demo Analyzer corresponds to the **v0.x** development phase of CS2Guard.
 
 Its long-term objective is to analyze Counter-Strike 2 demo files and extract meaningful gameplay features that can later be used to identify suspicious player behavior.
 
