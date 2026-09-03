@@ -117,16 +117,7 @@ A major objective is to reuse the same behavioral representation and detection m
 
 ## 📍 Current Status
 
-The offline Demo Analyzer is currently under development.
-
-**Completed milestones:**
-
-- ✅ M1 — Demo Parsing
-- ✅ M2 — Aim Feature Engineering
-
-**Current milestone:**
-
-- 🚧 M3 — Dataset Builder
+Detailed development progress, completed milestones and technical decisions are documented in the [Demo Analyzer Project Memory](docs/demo_analyzer_memory.md).
 
 The server-side real-time anti-cheat component is planned for a later stage of the project.
 
@@ -478,22 +469,22 @@ CS2Guard/
 ├── data/
 │
 ├── demo_analyzer/
+│   ├── data/
 │   ├── scripts/
-│   │   ├── parse_demo.py
-│   │   └── visualize_aim.py
-│   │
 │   ├── src/
 │   │   └── cs2guard_demo/
+│   │       ├── dataset/
+│   │       │   └── adapters/
 │   │       ├── features/
 │   │       ├── models/
 │   │       ├── parser/
 │   │       ├── utils/
 │   │       └── visualization/
-│   │
 │   └── tests/
-│       └── fixtures/
 │
 ├── docs/
+│   ├── datasets/
+│   │   └── cs2cd.md
 │   ├── demo_analyzer_memory.md
 │   └── server_anticheat_memory.md
 │

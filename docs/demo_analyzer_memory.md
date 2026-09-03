@@ -332,6 +332,187 @@ These aim features provide the first behavioral signals that can later be combin
 
 ---
 
+# M3 — Dataset Builder
+
+## Objective
+
+The objective of M3 was to transform the structured match data and behavioral features produced by the previous milestones into reproducible datasets suitable for machine-learning workflows.
+
+Instead of analyzing a single demo manually, CS2Guard can now process collections of matches and generate standardized samples that can later be used for training, validation and evaluation.
+
+Conceptually:
+
+```text
+Multiple match sources
+        ↓
+Source ingestion / adapters
+        ↓
+Canonical CS2Guard representation
+        ↓
+Feature extraction
+        ↓
+Dataset samples
+        ↓
+Train / validation / test splits
+```
+
+## Main Features
+
+### Multi-Demo Processing
+
+The dataset builder can process multiple demo files automatically rather than requiring each match to be analyzed individually.
+
+This makes it possible to build larger datasets from collections of CS2 matches while keeping the processing pipeline reproducible.
+
+### Event-Level Samples
+
+Gameplay events can be converted into individual dataset samples.
+
+These samples preserve event context while exposing features in a format suitable for later machine-learning stages.
+
+### Player-Level Samples
+
+CS2Guard can also aggregate information at player level.
+
+This provides a representation of player behavior across a larger portion of a match rather than only around isolated events.
+
+### Temporal Windows
+
+Temporal windows group consecutive observations so that short-term behavior can be represented as sequences.
+
+This is important for features such as aim movement, where the evolution of a signal over time can be more informative than a single measurement.
+
+### Feature Storage
+
+Generated samples and their associated features can be stored in reusable dataset files.
+
+The objective is to separate expensive demo processing from later machine-learning experiments so that the same generated dataset can be reused without parsing every source match again.
+
+### Missing and Invalid Data
+
+The dataset pipeline handles missing or invalid values so that malformed samples do not silently corrupt the generated dataset.
+
+This is particularly important when processing large collections of matches coming from different sources.
+
+### Numeric Normalization
+
+Numeric features can be normalized into consistent representations suitable for machine-learning processing.
+
+Normalization is performed at the dataset layer rather than changing the original gameplay information extracted from the source.
+
+### Labels
+
+Dataset samples support labels representing the expected class of the associated behavior, including legitimate and suspicious data.
+
+The labeling layer is kept separate from feature extraction so that behavioral features do not directly encode the expected result.
+
+### Dataset Splits
+
+The builder generates train, validation and test splits for later machine-learning experiments.
+
+A central requirement is to prevent information leakage between these splits.
+
+Matches and player identities are therefore considered when assigning samples so that strongly related observations are not distributed across training and evaluation subsets when the available source data makes this possible.
+
+### Dataset Statistics
+
+The generated dataset can expose statistics describing its content.
+
+These statistics provide a basic validation step for checking the number and distribution of generated samples before using them for model training.
+
+## External Dataset Support
+
+M3 introduces support for external datasets through source-specific adapters and a canonical CS2Guard dataset representation.
+
+The first external source being integrated is CS2CD. A dedicated adapter has been implemented and its automated tests pass.
+
+Detailed CS2CD integration decisions, including anonymous player identity handling and data-leakage limitations, are documented in [`datasets/cs2cd.md`](datasets/cs2cd.md).
+
+## CS2CD Identity and Leakage Constraints
+
+CS2CD anonymizes player identities, which prevents CS2Guard from directly associating its records with the original Steam identities from raw demo files.
+
+This means player-level leakage prevention cannot rely on a persistent real-world player identifier across unrelated CS2CD matches.
+
+The dataset pipeline must therefore preserve the strongest grouping information available from the source and document where leakage guarantees are limited by source anonymization.
+
+This distinction is important because leakage prevention is a property of both the splitting strategy and the identity information provided by the source dataset.
+
+## Coach / Non-Player Edge Case
+
+During M3 validation, an edge case was observed in demo data involving people present only as coaches.
+
+A coach can appear in extracted player-related data and may even produce unexpected gameplay-like records, such as a death during freeze time.
+
+This means that presence in the parser output alone is not sufficient to guarantee that an entity should be treated as a normal participating player.
+
+The case must therefore remain accounted for when constructing player-level datasets so that non-playing participants do not silently contaminate generated samples.
+
+## Implementation Structure
+
+M3 extends the project from single-demo feature inspection toward a reusable dataset pipeline.
+
+Conceptually:
+
+```text
+Demo files / external datasets
+        ↓
+src/cs2guard/ingestion/
+        ↓
+canonical CS2Guard data
+        ↓
+src/cs2guard/features/
+        ↓
+dataset builder
+        ↓
+generated ML-ready datasets
+```
+
+Source-specific logic remains isolated from the canonical dataset representation. This allows future external datasets to be integrated through their own adapters without forcing the rest of the pipeline to depend on their original schema.
+
+## Testing
+
+M3 is covered by automated tests for the dataset-building pipeline and the CS2CD adapter.
+
+The test suite validates the dataset logic independently of large local demo collections, while real multi-demo builds are used for integration validation.
+
+At the end of M3, the automated test suite passes, including the dedicated CS2CD adapter tests.
+
+## Technical Decisions
+
+Important decisions made during M3 include:
+
+* processing multiple matches through a reproducible dataset-building pipeline;
+* supporting event-level, player-level and temporal representations;
+* separating source ingestion from the canonical CS2Guard dataset representation;
+* introducing source-specific adapters for external datasets;
+* using CS2CD as the first external dataset integration;
+* keeping feature extraction independent from dataset labels;
+* generating train, validation and test splits with leakage prevention as a core requirement;
+* grouping samples using match and player information when the source provides sufficient identity information;
+* explicitly documenting weaker player-level leakage guarantees when external datasets anonymize identities;
+* handling missing and invalid samples before dataset generation;
+* exposing dataset statistics for validation;
+* keeping the coach/non-player edge case in mind when determining valid player samples.
+
+## Result
+
+M3 is complete and validated.
+
+CS2Guard can now transform data from multiple matches into structured, reusable datasets suitable for future machine-learning stages.
+
+The Demo Analyzer has progressed from:
+
+> "What behavioral features can be extracted from a match?"
+
+to:
+
+> "How can those features be converted into a reproducible dataset without introducing avoidable data leakage?"
+
+The project now has the dataset foundation required for later model training and suspicious-behavior detection.
+
+---
+
 # Future Milestones
 
 Future sections will document the next Demo Analyzer milestones as they are implemented.
