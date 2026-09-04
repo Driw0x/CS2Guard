@@ -388,6 +388,10 @@ Generated samples and their associated features can be stored in reusable datase
 
 The objective is to separate expensive demo processing from later machine-learning experiments so that the same generated dataset can be reused without parsing every source match again.
 
+The full dataset build writes each processed match directly to the final CSV outputs instead of keeping all previously processed matches in memory. This reduces peak memory usage during large builds.
+
+A lightweight checkpoint file is updated after each completed match. If the build is interrupted, it can be resumed with `--resume` without rebuilding matches that were already completed. If an interruption occurs during file writing, the output files are rolled back to their previous recorded sizes before the interrupted match is processed again.
+
 ### Missing and Invalid Data
 
 The dataset pipeline handles missing or invalid values so that malformed samples do not silently corrupt the generated dataset.
@@ -478,6 +482,20 @@ The test suite validates the dataset logic independently of large local demo col
 
 At the end of M3, the automated test suite passes, including the dedicated CS2CD adapter tests.
 
+A full-scale dataset build was also successfully completed using both native demo files and CS2CD data.
+
+The final canonical dataset contains:
+
+* 2 data sources (`demo` and `cs2cd`);
+* 320 matches;
+* 3,133 players;
+* 523,083 events;
+* 229,149,465 ticks;
+* 405,663 temporal windows;
+* 405,663 aim feature samples.
+
+This large-scale build also validated the incremental storage and checkpoint system under realistic dataset volumes.
+
 ## Technical Decisions
 
 Important decisions made during M3 include:
@@ -493,6 +511,9 @@ Important decisions made during M3 include:
 * explicitly documenting weaker player-level leakage guarantees when external datasets anonymize identities;
 * handling missing and invalid samples before dataset generation;
 * exposing dataset statistics for validation;
+* writing completed matches incrementally to the final dataset files to avoid accumulating all source data in memory;
+* using a lightweight per-match checkpoint and `--resume` mechanism for interrupted long-running builds;
+* rolling back partially written output files before resuming an interrupted match;
 * keeping the coach/non-player edge case in mind when determining valid player samples.
 
 ## Result
