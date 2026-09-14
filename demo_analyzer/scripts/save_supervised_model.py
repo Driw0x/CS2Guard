@@ -2,12 +2,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from cs2guard_demo.detection.anomaly import FEATURE_COLUMNS
-from cs2guard_demo.supervised.comparison import aggregate_player_scores, evaluate_ranked_scores
-from cs2guard_demo.supervised.dataset import LABEL_TO_TARGET, prepare_supervised_data, split_labeled_dataset
-from cs2guard_demo.supervised.evaluation import evaluate_model
-from cs2guard_demo.supervised.models import create_tuned_models
-from cs2guard_demo.supervised.persistence import save_model_bundle
+from cs2guard_demo.detection import FEATURE_COLUMNS
+from cs2guard_demo.supervised import LABEL_TO_TARGET, aggregate_player_scores, create_tuned_models, evaluate_model, evaluate_ranked_scores, prepare_supervised_data, save_model_bundle, split_labeled_dataset
 
 INPUT = Path("data/processed/supervised_dataset.csv")
 OUTPUT_DIR = Path("models/supervised")

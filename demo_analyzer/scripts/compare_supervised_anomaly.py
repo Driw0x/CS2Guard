@@ -2,9 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from cs2guard_demo.supervised.comparison import aggregate_player_scores, evaluate_ranked_scores, score_lof_held_out
-from cs2guard_demo.supervised.dataset import prepare_supervised_data, split_labeled_dataset
-from cs2guard_demo.supervised.models import train_tuned_models
+from cs2guard_demo.supervised import aggregate_player_scores, evaluate_ranked_scores, prepare_supervised_data, score_lof_held_out, split_labeled_dataset, train_tuned_models
 
 INPUT = Path("data/processed/supervised_dataset.csv")
 TEST_SIZE = 0.2

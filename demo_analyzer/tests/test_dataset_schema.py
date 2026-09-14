@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from cs2guard_demo.dataset.schema import build_player_id, validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset import build_player_id, validate_event_schema, validate_tick_schema
 
 
 def test_global_player_id_is_stable_between_matches():

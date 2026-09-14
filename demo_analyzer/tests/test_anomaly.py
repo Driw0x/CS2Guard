@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cs2guard_demo.detection.anomaly import (
+from cs2guard_demo.detection import (
     FEATURE_COLUMNS,
     compute_suspicion_scores,
     run_isolation_forest,

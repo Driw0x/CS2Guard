@@ -2,9 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from cs2guard_demo.supervised.dataset import prepare_supervised_data, split_labeled_dataset
-from cs2guard_demo.supervised.evaluation import evaluate_model
-from cs2guard_demo.supervised.models import train_baseline_models, train_gradient_boosting_model, train_random_forest_model
+from cs2guard_demo.supervised import evaluate_model, prepare_supervised_data, split_labeled_dataset, train_baseline_models, train_gradient_boosting_model, train_random_forest_model
 
 INPUT = Path("data/processed/supervised_dataset.csv")
 TEST_SIZE = 0.2

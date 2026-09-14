@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 sys.path.insert(0, str(SRC))
 
-from cs2guard_demo.detection.anomaly import FEATURE_COLUMNS
+from cs2guard_demo.detection import FEATURE_COLUMNS
 
 INPUT = ROOT / "data" / "processed" / "aim_features.csv"
 OUTPUT = ROOT / "data" / "processed" / "legitimate_baseline.csv"

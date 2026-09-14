@@ -5,10 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from cs2guard_demo.dataset.adapters.cs2cd import CS2CDAdapter
-from cs2guard_demo.dataset.adapters.demo import DemoAdapter
-from cs2guard_demo.dataset.builder import DatasetBuilder
-from cs2guard_demo.dataset.schema import validate_aim_feature_schema, validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset import DatasetBuilder, validate_aim_feature_schema, validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset.adapters import CS2CDAdapter, DemoAdapter
 
 DEMO_DIRECTORY = Path("data/raw/train_sources/demo")
 CS2CD_DIRECTORY = Path("data/raw/train_sources/cs2cd")

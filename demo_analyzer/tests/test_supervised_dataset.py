@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cs2guard_demo.dataset.schema import AIM_FEATURE_COLUMNS
-from cs2guard_demo.detection.anomaly import FEATURE_COLUMNS
-from cs2guard_demo.supervised.dataset import build_labeled_dataset, prepare_supervised_data, split_labeled_dataset
+from cs2guard_demo.dataset import AIM_FEATURE_COLUMNS
+from cs2guard_demo.detection import FEATURE_COLUMNS
+from cs2guard_demo.supervised import build_labeled_dataset, prepare_supervised_data, split_labeled_dataset
 
 
 def make_dataset() -> pd.DataFrame:

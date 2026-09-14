@@ -1,5 +1,4 @@
-from cs2guard_demo.supervised.dataset import build_labeled_dataset, prepare_supervised_data
-from cs2guard_demo.supervised.tuning import create_group_cv, tune_gradient_boosting, tune_random_forest
+from cs2guard_demo.supervised import build_labeled_dataset, create_group_cv, prepare_supervised_data, tune_gradient_boosting, tune_random_forest
 from tests.test_supervised_dataset import make_dataset
 
 

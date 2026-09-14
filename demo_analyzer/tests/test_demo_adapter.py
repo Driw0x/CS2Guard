@@ -2,9 +2,8 @@ from pathlib import Path
 import pandas as pd
 
 import cs2guard_demo.dataset.adapters.demo as demo_module
-from cs2guard_demo.dataset.adapters.demo import DemoAdapter
-from cs2guard_demo.dataset.builder import DatasetBuilder
-from cs2guard_demo.dataset.schema import validate_aim_feature_schema, validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset import DatasetBuilder, validate_aim_feature_schema, validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset.adapters import DemoAdapter
 
 
 class FakeDemoParser:

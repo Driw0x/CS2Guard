@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 sys.path.insert(0, str(SRC))
 
-from cs2guard_demo.detection.anomaly import FEATURE_COLUMNS, run_lof
+from cs2guard_demo.detection import FEATURE_COLUMNS, run_lof
 
 INPUT = ROOT / "data" / "processed" / "aim_features.csv"
 BASELINE_INPUT = ROOT / "data" / "processed" / "lof_players.csv"

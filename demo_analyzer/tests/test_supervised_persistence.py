@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cs2guard_demo.supervised.models import create_tuned_models
-from cs2guard_demo.supervised.persistence import load_model_bundle, save_model_bundle
+from cs2guard_demo.supervised import create_tuned_models, load_model_bundle, save_model_bundle
 
 
 def test_save_and_load_model_bundle(tmp_path):

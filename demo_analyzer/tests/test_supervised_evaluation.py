@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cs2guard_demo.supervised.evaluation import analyze_thresholds, evaluate_model, evaluate_threshold
+from cs2guard_demo.supervised import analyze_thresholds, evaluate_model, evaluate_threshold
 
 
 class TestModel:

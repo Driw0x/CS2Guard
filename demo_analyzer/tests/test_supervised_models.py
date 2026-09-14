@@ -1,7 +1,7 @@
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 
-from cs2guard_demo.supervised.dataset import prepare_supervised_data
-from cs2guard_demo.supervised.models import (
+from cs2guard_demo.supervised import (
+    prepare_supervised_data,
     create_baseline_models,
     create_gradient_boosting_model,
     create_random_forest_model,

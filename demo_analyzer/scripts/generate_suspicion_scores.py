@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 sys.path.insert(0, str(SRC))
 
-from cs2guard_demo.detection.anomaly import compute_suspicion_scores
+from cs2guard_demo.detection import compute_suspicion_scores
 
 INPUT = ROOT / "data" / "processed" / "lof_players.csv"
 OUTPUT = ROOT / "data" / "processed" / "suspicion_scores.csv"

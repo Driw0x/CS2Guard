@@ -1,8 +1,7 @@
 import argparse
 from pathlib import Path
-from cs2guard_demo.dataset.adapters.cs2cd import CS2CDAdapter
-from cs2guard_demo.dataset.schema import validate_event_schema, validate_tick_schema
-from cs2guard_demo.dataset.builder import DatasetBuilder
+from cs2guard_demo.dataset import DatasetBuilder, validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset.adapters import CS2CDAdapter
 
 
 def main() -> None:

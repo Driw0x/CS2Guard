@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from cs2guard_demo.detection.anomaly import FEATURE_COLUMNS
-from cs2guard_demo.supervised.dataset import build_labeled_dataset
+from cs2guard_demo.detection import FEATURE_COLUMNS
+from cs2guard_demo.supervised import build_labeled_dataset
 
 INPUT = Path("data/processed/aim_features.csv")
 OUTPUT = Path("data/processed/supervised_dataset.csv")

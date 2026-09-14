@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 sys.path.insert(0, str(SRC))
 
-from cs2guard_demo.detection.anomaly import (
+from cs2guard_demo.detection import (
     run_isolation_forest,
     run_lof,
     run_one_class_svm,

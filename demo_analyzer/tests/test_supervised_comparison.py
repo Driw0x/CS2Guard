@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cs2guard_demo.supervised.comparison import aggregate_player_scores, evaluate_ranked_scores, score_lof_held_out
+from cs2guard_demo.supervised import aggregate_player_scores, evaluate_ranked_scores, score_lof_held_out
 
 
 def test_aggregate_player_scores():

@@ -1,5 +1,5 @@
 from pathlib import Path
-from cs2guard_demo.parser.demo_parser import DemoParser
+from cs2guard_demo.parser import DemoParser
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]

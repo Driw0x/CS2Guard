@@ -1,8 +1,7 @@
 from pathlib import Path
 
-from cs2guard_demo.dataset.adapters.demo import DemoAdapter
-from cs2guard_demo.dataset.builder import DatasetBuilder
-from cs2guard_demo.dataset.schema import validate_aim_feature_schema, validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset import DatasetBuilder, validate_aim_feature_schema, validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset.adapters import DemoAdapter
 
 DEMO_PATH = Path("data/raw/train_sources/demo/test.dem")
 

@@ -1,5 +1,5 @@
 import pandas as pd
-from cs2guard_demo.parser.demo_parser import DemoParser
+from cs2guard_demo.parser import DemoParser
 
 
 class FakeParser:

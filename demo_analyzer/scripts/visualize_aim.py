@@ -1,8 +1,8 @@
 from collections import defaultdict
 from pathlib import Path
-from cs2guard_demo.features.aim import angular_acceleration, angular_acceleration_magnitude, angular_speed, angular_velocity, associate_shots_with_aim_sequences, count_aim_corrections, crosshair_to_target_distance, find_potential_aim_snaps, find_potential_overshoots, find_target_acquisition, max_tracking_error, mean_tracking_error, tracking_error_std, tracking_time_on_target_ratio
-from cs2guard_demo.parser.demo_parser import DemoParser
-from cs2guard_demo.visualization.aim import plot_aim_trajectory
+from cs2guard_demo.features import angular_acceleration, angular_acceleration_magnitude, angular_speed, angular_velocity, associate_shots_with_aim_sequences, count_aim_corrections, crosshair_to_target_distance, find_potential_aim_snaps, find_potential_overshoots, find_target_acquisition, max_tracking_error, mean_tracking_error, tracking_error_std, tracking_time_on_target_ratio
+from cs2guard_demo.parser import DemoParser
+from cs2guard_demo.visualization import plot_aim_trajectory
 
 
 ROOT_DIR = Path(__file__).resolve().parents[2]

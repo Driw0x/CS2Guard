@@ -2,8 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from cs2guard_demo.supervised.dataset import prepare_supervised_data, split_labeled_dataset
-from cs2guard_demo.supervised.tuning import tune_gradient_boosting, tune_random_forest
+from cs2guard_demo.supervised import prepare_supervised_data, split_labeled_dataset, tune_gradient_boosting, tune_random_forest
 
 INPUT = Path("data/processed/supervised_dataset.csv")
 TEST_SIZE = 0.2

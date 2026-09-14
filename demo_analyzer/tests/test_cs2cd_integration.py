@@ -2,9 +2,8 @@ import json
 
 import pandas as pd
 
-from cs2guard_demo.dataset.adapters.cs2cd import CS2CDAdapter
-from cs2guard_demo.dataset.builder import DatasetBuilder
-from cs2guard_demo.dataset.schema import validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset import DatasetBuilder, validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset.adapters import CS2CDAdapter
 
 
 def test_cs2cd_to_aim_features_integration(tmp_path, monkeypatch):

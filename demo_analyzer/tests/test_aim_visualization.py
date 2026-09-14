@@ -1,7 +1,7 @@
 import matplotlib
 import pytest
 matplotlib.use('Agg')
-from cs2guard_demo.visualization.aim import plot_aim_trajectory
+from cs2guard_demo.visualization import plot_aim_trajectory
 
 
 def test_plot_aim_trajectory_rejects_mismatched_lengths():

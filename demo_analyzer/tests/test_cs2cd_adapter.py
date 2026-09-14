@@ -1,7 +1,7 @@
 import json
 import pandas as pd
-from cs2guard_demo.dataset.adapters.cs2cd import CS2CDAdapter
-from cs2guard_demo.dataset.schema import validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset import validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset.adapters import CS2CDAdapter
 
 
 def create_cs2cd_files(tmp_path):
