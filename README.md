@@ -220,7 +220,7 @@ Build the first ML-based behavioral detector without requiring large amounts of 
 
 Train classification models once sufficiently reliable labeled data becomes available.
 
-* [ ] Build a labeled dataset
+* [x] Build a labeled dataset
 * [ ] Establish a baseline classifier
 * [ ] Train Random Forest models
 * [ ] Experiment with gradient boosting models
