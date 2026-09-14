@@ -1,0 +1,66 @@
+{
+  "decision_threshold": null,
+  "features": [
+    "mean_angular_speed",
+    "max_angular_speed",
+    "std_angular_speed",
+    "mean_angular_acceleration",
+    "max_angular_acceleration",
+    "std_angular_acceleration"
+  ],
+  "hyperparameters": {
+    "bootstrap": true,
+    "ccp_alpha": 0.0,
+    "class_weight": null,
+    "criterion": "gini",
+    "max_depth": 15,
+    "max_features": "sqrt",
+    "max_leaf_nodes": null,
+    "max_samples": null,
+    "min_impurity_decrease": 0.0,
+    "min_samples_leaf": 5,
+    "min_samples_split": 2,
+    "min_weight_fraction_leaf": 0.0,
+    "monotonic_cst": null,
+    "n_estimators": 150,
+    "n_jobs": -1,
+    "oob_score": false,
+    "random_state": 42,
+    "verbose": 0,
+    "warm_start": false
+  },
+  "label_mapping": {
+    "legitimate": 0,
+    "suspicious": 1
+  },
+  "metrics": {
+    "event": {
+      "f1": 0.1596477125781987,
+      "false_positive_rate": 0.02620592298912717,
+      "fn": 22300,
+      "fp": 1745,
+      "pr_auc": 0.38184596538168064,
+      "precision": 0.5668900471581038,
+      "recall": 0.09290595509274324,
+      "roc_auc": 0.5932492927278986,
+      "tn": 64843,
+      "tp": 2284
+    },
+    "player": {
+      "pr_auc": 0.6839833414991215,
+      "roc_auc": 0.7778977453159733
+    }
+  },
+  "model_name": "random_forest",
+  "random_state": 42,
+  "test": {
+    "matches": 64,
+    "player_matches": 637,
+    "samples": 91172
+  },
+  "training": {
+    "matches": 253,
+    "samples": 306315
+  },
+  "version": "v1"
+}

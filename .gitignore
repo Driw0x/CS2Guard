@@ -2,7 +2,9 @@
 *.json
 *.csv
 *.json
+!demo_analyzer/models/supervised/*.json
 *.parquet
+*.joblib
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -222,16 +222,16 @@ Train classification models once sufficiently reliable labeled data becomes avai
 
 * [x] Build a labeled dataset
 * [x] Establish a baseline classifier
-* [ ] Train Random Forest models
-* [ ] Experiment with gradient boosting models
-* [ ] Tune model hyperparameters
-* [ ] Measure precision
-* [ ] Measure recall
-* [ ] Measure F1-score
-* [ ] Measure ROC-AUC / PR-AUC
-* [ ] Analyze the false-positive rate
-* [ ] Compare supervised and anomaly-detection approaches
-* [ ] Add model versioning and persistence
+* [x] Train Random Forest models
+* [x] Experiment with gradient boosting models
+* [x] Tune model hyperparameters
+* [x] Measure precision
+* [x] Measure recall
+* [x] Measure F1-score
+* [x] Measure ROC-AUC / PR-AUC
+* [x] Analyze the false-positive rate
+* [x] Compare supervised and anomaly-detection approaches
+* [x] Add model versioning and persistence
 
 **Milestone result:** CS2Guard has an evaluated ML model capable of producing behavioral suspicion predictions.
 
@@ -470,6 +470,8 @@ CS2Guard/
 │
 ├── demo_analyzer/
 │   ├── data/
+│   ├── models/
+│   │   └── supervised/
 │   ├── scripts/
 │   ├── src/
 │   │   └── cs2guard_demo/
@@ -479,23 +481,10 @@ CS2Guard/
 │   │       ├── features/
 │   │       ├── models/
 │   │       ├── parser/
+│   │       ├── supervised/
 │   │       ├── utils/
 │   │       └── visualization/
 │   └── tests/
-│
-├── docs/
-│   ├── datasets/
-│   │   └── cs2cd.md
-│   ├── demo_analyzer_memory.md
-│   └── server_anticheat_memory.md
-│
-├── server_side/
-│
-├── .gitignore
-├── pyproject.toml
-├── pytest.ini
-├── requirements.txt
-└── README.md
 ```
 
 The architecture separates the source of gameplay data from the behavioral analysis pipeline.
