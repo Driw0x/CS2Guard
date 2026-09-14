@@ -201,16 +201,16 @@ See [`docs/datasets/cs2cd.md`](docs/datasets/cs2cd.md) for integration details, 
 
 Build the first ML-based behavioral detector without requiring large amounts of labeled cheating data.
 
-* [ ] Establish statistical baselines for legitimate behavior
-* [ ] Implement Isolation Forest
-* [ ] Experiment with Local Outlier Factor
-* [ ] Experiment with One-Class SVM
-* [ ] Compare anomaly detection approaches
-* [ ] Generate anomaly scores for individual events
-* [ ] Generate anomaly scores for players
-* [ ] Analyze false positives
-* [ ] Identify the most influential features
-* [ ] Define an initial suspicion scoring strategy
+* [x] Establish statistical baselines for legitimate behavior
+* [x] Implement Isolation Forest
+* [x] Experiment with Local Outlier Factor
+* [x] Experiment with One-Class SVM
+* [x] Compare anomaly detection approaches
+* [x] Generate anomaly scores for individual events
+* [x] Generate anomaly scores for players
+* [x] Analyze false positives
+* [x] Identify the most influential features
+* [x] Define an initial suspicion scoring strategy
 
 **Milestone result:** CS2Guard can automatically identify unusual aiming behavior.
 
@@ -475,6 +475,7 @@ CS2Guard/
 │   │   └── cs2guard_demo/
 │   │       ├── dataset/
 │   │       │   └── adapters/
+│   │       ├── detection/
 │   │       ├── features/
 │   │       ├── models/
 │   │       ├── parser/

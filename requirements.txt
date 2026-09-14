@@ -1,3 +1,4 @@
 demoparser2
 pytest
 matplotlib
+scikit-learn
