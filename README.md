@@ -11,50 +11,55 @@ The long-term goal is to evolve the project into a **real-time server-side anti-
 > **Status:** 🚧 In Development
 > **Development:** 🤖 AI-Assisted
 
+## Quick Start
+
+From the repository root, install with Python 3.11 or newer and run the tests (PowerShell):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e '.[dev]'
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+To analyze a demo, provide a `.dem` file and a trusted M5 `.joblib` model with its adjacent `.json` metadata. Adapt the input paths to your files:
+
+```powershell
+.\.venv\Scripts\cs2guard.exe analyze '.\demo_analyzer\data\raw\train_sources\demo\test.dem' --model '.\demo_analyzer\models\supervised\random_forest_v1.joblib' --output '.\demo_analyzer\data\processed\manual_analysis'
+```
+
+Open `demo_analyzer/data/processed/manual_analysis/report.md` for rankings and PNG links; `report.json` contains all scored windows. Without `--output`, reports go to `<demo stem>_analysis/` in the working directory.
+
+A fresh clone includes model metadata, but no trained model or demos: `.joblib` and `.dem` files are ignored by Git. Installation and tests require neither. Inference requires both and never trains a model; see [model prerequisites](docs/demo_analyzer_memory.md#reproducible-validation) for the separate training procedure and dataset requirement.
+
+## Contents
+
+* [Project Goals](#-project-goals)
+* [Project Approach](#-project-approach)
+* [Quick Start](#quick-start)
+* [Roadmap](#️-roadmap)
+* [Project Architecture](#️-project-architecture)
+* [Tech Stack](#️-tech-stack)
+* [Detection Strategy](#-detection-strategy)
+* [Research Challenges](#️-research-challenges)
+* [Documentation / Technical Memory](#documentation--technical-memory)
+
 ---
 
 ## 🤖 AI-Assisted Development
 
-CS2Guard is developed with the assistance of AI tools.
-
-AI is used as a development assistant for tasks such as:
-
-* Code generation and refactoring
-* Debugging and troubleshooting
-* Documentation
-* Architecture discussions
-* Research and technical exploration
-* Test generation
-* Machine learning experimentation
-
-The project's architecture, technical decisions, experiments, evaluation methodology, and final implementation remain under human supervision and validation.
-
-AI-generated code and suggestions are reviewed, tested, and adapted before being integrated into the project.
+AI tools assist with code, tests, documentation and research. Architecture, experiments and integration remain under human review and validation.
 
 ---
 
 ## 🎯 Project Goals
 
-CS2Guard explores whether cheating behavior can be detected from gameplay telemetry using machine learning.
+Investigate whether server-observable gameplay can reveal suspicious behavior without intrusive client-side monitoring:
 
-The project focuses on behavioral signals such as:
+* Aim movement, crosshair placement and target tracking
+* Reaction time, angular velocity and acceleration
+* Shooting, player movement, enemy awareness and prefire patterns
 
-* Aim movement
-* Crosshair placement
-* Target tracking
-* Reaction time
-* Angular velocity and acceleration
-* Shooting behavior
-* Player movement
-* Enemy awareness
-* Prefire patterns
-
-Rather than searching for cheat software on the player's computer, CS2Guard focuses on detecting **abnormal gameplay behavior observable from game data**.
-
-The project follows two main stages:
-
-1. **Offline Demo Analysis** — research, feature engineering, dataset construction and model training.
-2. **Real-Time Server-Side Detection** — deployment of the detection pipeline on live server data.
+Development starts with offline demo research and model training, then targets live server-side detection.
 
 ---
 
@@ -62,9 +67,7 @@ The project follows two main stages:
 
 ### Stage 1 — Offline Demo Analysis
 
-CS2 demo files provide historical match data that can be analyzed without real-time constraints.
-
-This stage is used to understand gameplay data, develop behavioral features and evaluate different machine learning approaches.
+The offline analyzer parses recorded matches, extracts behavioral features and evaluates ML models without real-time constraints.
 
 ```text
 CS2 Demo
@@ -85,11 +88,9 @@ ML Detection
 Suspicion Score
 ```
 
-The offline analyzer acts as the research and validation environment for the future real-time system.
-
 ### Stage 2 — Real-Time Server-Side Detection
 
-Once the detection approach has been validated on historical matches, the same feature extraction and ML pipeline will progressively be adapted to live server data.
+The planned server-side system adapts the offline pipeline to live telemetry, reusing features and models where possible.
 
 ```text
 CS2 Server
@@ -113,13 +114,10 @@ Risk Aggregation
 Player Suspicion Score
 ```
 
-A major objective is to reuse the same behavioral representation and detection models between offline and online analysis whenever possible.
+## Documentation / Technical Memory
 
-## 📍 Current Status
-
-Detailed development progress, completed milestones and technical decisions are documented in the [Demo Analyzer Project Memory](docs/demo_analyzer_memory.md).
-
-The server-side real-time anti-cheat component is planned for a later stage of the project.
+* [Demo Analyzer Project Memory](docs/demo_analyzer_memory.md): implementation, experiments, metrics and validation protocols.
+* [Server-Side Project Memory](docs/server_anticheat_memory.md): future real-time architecture and research.
 
 ---
 
@@ -142,8 +140,6 @@ Build the foundation for extracting structured gameplay data from CS2 demo files
 * [x] Define normalized `Match`, `Player`, `Round`, `Tick`, and `Event` structures
 * [x] Add tests for demo parsing
 
-**Milestone result:** A `.dem` file can be converted into structured gameplay data usable by the rest of CS2Guard.
-
 ---
 
 ## M2 — Aim Feature Engineering
@@ -162,8 +158,6 @@ Transform raw gameplay data into measurable aiming behavior.
 * [x] Associate shots with aiming sequences
 * [x] Visualize aim trajectories
 * [x] Validate features on selected demo sequences
-
-**Milestone result:** CS2Guard can represent a player's aiming behavior as numerical features.
 
 ---
 
@@ -185,15 +179,11 @@ Create a reproducible pipeline for generating machine-learning-ready datasets fr
 * [x] Define a canonical CS2Guard dataset schema
 * [x] Support and normalize external datasets such as CS2CD to the canonical schema
 
-**Milestone result:** A collection of CS2 demos and external data sources can automatically be transformed into a clean, standardized ML dataset.
+Match-level isolation is enforced for M5 evaluation. Player isolation depends on available identities; CS2CD anonymization prevents guaranteeing disjoint real players across matches.
 
 ### External Datasets
 
-CS2Guard supports the integration of external Counter-Strike 2 datasets through adapters that convert source-specific data into the canonical CS2Guard dataset representation.
-
-The first external dataset being integrated is **CS2CD**, which provides anonymized gameplay data and player-level cheat labels.
-
-See [`docs/datasets/cs2cd.md`](docs/datasets/cs2cd.md) for integration details, data mapping, labeling strategy, and known limitations.
+The **CS2CD** adapter maps anonymized gameplay and player-level cheat labels to the canonical schema. See [integration details and limitations](docs/datasets/cs2cd.md).
 
 ---
 
@@ -211,8 +201,6 @@ Build the first ML-based behavioral detector without requiring large amounts of 
 * [x] Analyze false positives
 * [x] Identify the most influential features
 * [x] Define an initial suspicion scoring strategy
-
-**Milestone result:** CS2Guard can automatically identify unusual aiming behavior.
 
 ---
 
@@ -233,7 +221,7 @@ Train classification models once sufficiently reliable labeled data becomes avai
 * [x] Compare supervised and anomaly-detection approaches
 * [x] Add model versioning and persistence
 
-**Milestone result:** CS2Guard has an evaluated ML model capable of producing behavioral suspicion predictions.
+On historical CS2CD held-out matches, Random Forest achieves player-match **ROC-AUC 0.7779 / PR-AUC 0.6840**, versus **0.6323 / 0.4624** for LOF. See [M5 results](docs/demo_analyzer_memory.md#result-4) for metrics and threshold trade-offs.
 
 ---
 
@@ -241,58 +229,29 @@ Train classification models once sufficiently reliable labeled data becomes avai
 
 Turn the machine learning pipeline into a usable offline match-analysis tool.
 
-* [ ] Analyze an entire demo from a single command
-* [ ] Analyze every player in the match
-* [ ] Generate an overall suspicion score per player
-* [ ] Generate separate behavioral scores
-* [ ] Rank players by suspicion score
-* [ ] Identify suspicious rounds
-* [ ] Identify suspicious events
-* [ ] Explain which features contributed to a score
-* [ ] Visualize suspicious aim sequences
-* [ ] Generate a match analysis report
-* [ ] Build a CLI for demo analysis
+* [x] Analyze an entire demo from a single command
+* [x] Analyze every player in the match, retaining insufficient-data players without a score
+* [x] Generate an overall suspicion score per player using the M5 window-score mean
+* [x] Generate separate descriptive behavioral indicators with units and availability
+* [x] Rank players by suspicion score with deterministic tie ordering
+* [x] Identify rounds to inspect from scored windows, retaining unknown round associations
+* [x] Identify events to inspect without claiming a validated cheat threshold
+* [x] Explain measured features, global importance and signed local RF/tree probability contributions
+* [x] Visualize aim sequences selected for inspection
+* [x] Generate a JSON and Markdown match analysis report
+* [x] Build a CLI for demo analysis
 
-Example:
+### M6 usage and validation
 
-```bash
-cs2guard analyze match.dem
-```
+Use the command in [Quick Start](#quick-start) with a trained M5 bundle. Reports include player rankings, review sequences, JSON/Markdown and aim plots.
 
-Possible output:
+**Validation:** M6 is technically complete, with **330 automated tests passing at the latest recorded audit**. Evaluation covers three technical demo recordings and nine presumed-legitimate external demos.
 
-```text
-Match Analysis
-─────────────────────────────────
+Scores are uncalibrated model outputs; detection accuracy on independently confirmed cheaters remains unvalidated.
 
-Player          Suspicion Score
-─────────────────────────────────
-Player 1             12%
-Player 2             19%
-Player 3             84%  ⚠
-Player 4             21%
-Player 5             16%
-```
+See [Demo Analyzer Project Memory](docs/demo_analyzer_memory.md#m6--demo-analyzer) for detailed tests, experiments and scientific limitations.
 
-A suspicious player could then be inspected in more detail:
-
-```text
-Player 3
-
-Overall Score       84%
-
-Aim Anomaly         91%
-Tracking Anomaly    82%
-Reaction Anomaly    73%
-
-Suspicious Events
-─────────────────
-Round 5  - Event #1842
-Round 11 - Event #4921
-Round 17 - Event #7834
-```
-
-**Milestone result:** A user can provide a CS2 demo and receive an interpretable behavioral analysis of the match.
+M7–M10 below are planned; their milestone results describe intended capabilities.
 
 ---
 
@@ -300,13 +259,7 @@ Round 17 - Event #7834
 
 Investigate whether sequence-based ML models improve behavioral detection.
 
-Instead of only analyzing aggregated features:
-
-```text
-Player → Features → Model
-```
-
-the system will analyze sequences of consecutive ticks:
+Models will analyze consecutive ticks:
 
 ```text
 Tick t
@@ -338,14 +291,6 @@ Temporal Model
 
 Extend behavioral detection beyond aim to investigate suspicious enemy awareness.
 
-Potential signals include:
-
-* Crosshair alignment with non-visible enemies
-* Enemy tracking through geometry
-* Prefire timing
-* Position anticipation
-* Repeated abnormal enemy awareness
-
 * [ ] Determine enemy visibility at each relevant tick
 * [ ] Compute crosshair alignment with enemies
 * [ ] Detect crosshair tracking of non-visible enemies
@@ -359,7 +304,7 @@ Potential signals include:
 * [ ] Evaluate false positives on legitimate players
 * [ ] Integrate awareness signals into the global suspicion score
 
-The system must account for legitimate information sources such as sound cues, teammate communication, common angles and general game sense.
+Interpret awareness in context: sound, teammates, common angles and game sense can explain apparent anticipation.
 
 **Milestone result:** CS2Guard combines aim-related and enemy-awareness signals when evaluating suspicious behavior.
 
@@ -487,9 +432,7 @@ CS2Guard/
 │   └── tests/
 ```
 
-The architecture separates the source of gameplay data from the behavioral analysis pipeline.
-
-The long-term objective is to allow both demo and server data to use the same internal representation:
+Demo and future server adapters target a shared game-state representation and analysis pipeline:
 
 ```text
 Demo Parser ─────┐
@@ -512,35 +455,40 @@ Server Stream ───┘
 
 ---
 
-# 🛠️ Planned Tech Stack
+# 🛠️ Tech Stack
+
+## Currently used
 
 ### Core
 
 * Python
 * NumPy
-* Pandas
+* pandas
 * demoparser2
 
 ### Machine Learning
 
 * scikit-learn
-* XGBoost / LightGBM
-* PyTorch
+* joblib (model persistence)
+
+Gradient boosting uses scikit-learn's `HistGradientBoostingClassifier`.
 
 ### Data Analysis & Visualization
 
 * Matplotlib
-* Jupyter
+* pytest (development tests)
 
-Additional technologies may be introduced as the real-time component of the project develops.
+## Planned / Under Investigation
+
+* PyTorch and temporal models (M7)
+* Live telemetry ingestion and streaming inference (M9–M10)
+* XGBoost / LightGBM and Jupyter remain candidates from the original stack; they are not integrated dependencies.
 
 ---
 
 # 📊 Detection Strategy
 
-CS2Guard does not assume that a single suspicious event means that a player is cheating.
-
-Instead, the system progressively aggregates behavioral evidence.
+M6 averages M5 window scores per player. The longer-term strategy combines multiple behavioral signals over time:
 
 ```text
 Raw Gameplay
@@ -561,158 +509,35 @@ Behavioral Scores
 Global Suspicion Score
 ```
 
-For example:
-
-```text
-Player
-
-Aim                    0.91
-Tracking               0.82
-Reaction               0.73
-Awareness              0.67
-Movement               0.14
-                         │
-                         ▼
-                Suspicion Score
-                       0.84
-```
-
-The exact scoring strategy will evolve through experimentation and evaluation.
+Additional behavioral scores and their combination remain future research.
 
 ---
 
 # ⚠️ Research Challenges
 
-## False Positives
-
-Highly skilled players can naturally exhibit behaviors that appear statistically unusual.
-
-Therefore:
+* **False positives and skill:** unusual mechanics can be legitimate; compare players across skill levels and aggregate evidence over time.
+* **Dataset quality:** reliable labels and independent evaluation populations are difficult to obtain.
+* **Gameplay context:** sound, teammate information, previous visibility and expected timings can explain suspicious-looking actions.
+* **Offline to online:** live inference must handle incomplete information, player state and concurrent players with low latency and limited server overhead.
 
 ```text
 Anomaly ≠ Cheater
 ```
 
-A practical detection system must aggregate multiple signals over time and carefully control its false-positive rate.
-
----
-
-## Dataset Quality
-
-Reliable labels for legitimate and cheating players can be difficult to obtain.
-
-Dataset construction and label quality are therefore treated as major parts of the project rather than simple preprocessing steps.
-
----
-
-## Player Skill
-
-Gameplay behavior varies significantly depending on player skill.
-
-Future models may need to account for differences between:
-
-* New players
-* Average players
-* Experienced players
-* High-level competitive players
-
-A strong legitimate player should not be classified as suspicious simply because their mechanical performance is unusual compared with an average player.
-
----
-
-## Context
-
-A suspicious action can often have a legitimate explanation.
-
-For example, aiming toward an enemy behind a wall may result from:
-
-* Sound information
-* Teammate communication
-* Previous enemy visibility
-* Common positioning
-* Expected timings
-* Prefire
-* Game sense
-
-Behavior must therefore be analyzed within its gameplay context.
-
----
-
-## Offline vs. Online Detection
-
-Information available from a complete demo may not necessarily be available to a real-time server-side detector.
-
-A major research objective of CS2Guard is therefore to determine how much detection performance can be preserved when moving from:
-
-```text
-Offline Demo Analysis
-          ↓
-Real-Time Server Analysis
-```
-
----
-
-## Real-Time Constraints
-
-The server-side system introduces additional requirements:
-
-* Low inference latency
-* Efficient feature computation
-* Continuous state management
-* Multiple simultaneous players
-* Limited computational overhead
-* Incomplete future information
-
-These constraints will influence both the machine learning models and the software architecture.
-
 ---
 
 # 🔬 Research Questions
 
-CS2Guard aims to progressively investigate several questions:
-
-1. Which behavioral features best characterize abnormal aiming behavior?
-2. Can suspicious aiming behavior be identified without labeled cheat data?
-3. How accurately can supervised models distinguish legitimate and suspicious behavior?
-4. Which features contribute most to detection?
-5. Do temporal models outperform aggregated statistical features?
-6. Can enemy-awareness patterns provide useful signals for detecting wallhack-like behavior?
-7. How does player skill affect anomaly detection?
-8. How can multiple weak behavioral signals be combined into a reliable suspicion score?
-9. How much detection performance is lost when moving from offline analysis to online inference?
-10. Can behavioral ML inference operate efficiently enough for real-time server-side deployment?
+1. Which aim and awareness features distinguish suspicious behavior from skill and legitimate context?
+2. How do anomaly, supervised and temporal models compare, and which features explain their predictions?
+3. How can multiple weak signals be combined while controlling false positives?
+4. How much accuracy survives the move to live telemetry, and can inference meet server latency constraints?
 
 ---
 
 # 🚀 Long-Term Goal
 
-The project progressively moves from behavioral research to a complete real-time detection pipeline:
-
-```text
-Demo Parsing
-     ↓
-Feature Engineering
-     ↓
-Dataset Construction
-     ↓
-Anomaly Detection
-     ↓
-Supervised Detection
-     ↓
-Demo Analyzer
-     ↓
-Temporal Modeling
-     ↓
-Awareness Analysis
-     ↓
-Streaming Detection
-     ↓
-Server Integration
-     ↓
-Real-Time Anti-Cheat
-```
-
-The final objective is to investigate whether **server-observable gameplay behavior can provide sufficient information to detect suspicious Counter-Strike 2 players using machine learning**.
+Investigate whether gameplay telemetry can support an experimental real-time, server-side anti-cheat, progressing through M1–M10 above.
 
 ---
 

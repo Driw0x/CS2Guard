@@ -1,5 +1,5 @@
 import pandas as pd
-VALID_LABELS = {'legitimate', 'suspicious'}
+from .schema import VALID_LABELS
 
 
 def validate_labels(labels: pd.DataFrame) -> None:

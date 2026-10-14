@@ -57,6 +57,10 @@ coverage.xml
 *.py.cover
 .hypothesis/
 .pytest_cache/
+.pytest_tmp*/
+demo_analyzer/data/processed/m6_validation/
+demo_analyzer/data/processed/m6_robustness_20261014/
+demo_analyzer/data/processed/validation_legitimate/
 cover/
 
 # Translations

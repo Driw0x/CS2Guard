@@ -5,14 +5,7 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import OneClassSVM
 
-FEATURE_COLUMNS = [
-    "mean_angular_speed",
-    "max_angular_speed",
-    "std_angular_speed",
-    "mean_angular_acceleration",
-    "max_angular_acceleration",
-    "std_angular_acceleration",
-]
+from cs2guard_demo.dataset.normalization import AIM_FEATURE_COLUMNS as FEATURE_COLUMNS
 
 PLAYER_GROUP_COLUMNS = [
     "source",

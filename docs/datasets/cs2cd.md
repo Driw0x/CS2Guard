@@ -97,4 +97,9 @@ The CS2CD adapter is implemented and covered by automated tests.
 
 The adapter can currently normalize metadata, events, tick data and player labels.
 
-The next step is to validate the adapter on real CS2CD JSON / Parquet match pairs and integrate the resulting data into the complete canonical CS2Guard Dataset Builder pipeline.
+The adapter is integrated into the canonical Dataset Builder and the M4/M5 experiments, as recorded in the Demo Analyzer project memory.
+Automated tests use controlled JSON/Parquet fixtures and cover non-finite telemetry and anonymous identities scoped to each match.
+The M6 audit does not repeat the historical full-dataset training experiments.
+
+The multi-source builder writes stable event/tick CSV headers. A historical output with a different header cannot be resumed safely.
+Preserve any research outputs before rebuilding without `--resume`; the builder replaces its generated CSV files during a fresh build.

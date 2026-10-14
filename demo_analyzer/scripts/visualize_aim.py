@@ -5,7 +5,6 @@ from cs2guard_demo.parser import DemoParser
 from cs2guard_demo.visualization import plot_aim_trajectory
 
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
 DEMO_PATH = Path('data/raw/train_sources/demo/test.dem')
 TICK_RATE = 64.0
 PRE_SHOT_TICKS = 12

@@ -1,3 +1,5 @@
+import numpy as np
+import pytest
 from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 
 from cs2guard_demo.supervised import (
@@ -20,17 +22,33 @@ def test_create_baseline_models():
     assert set(models) == {"dummy", "logistic_regression"}
 
 
-def test_train_baseline_models():
+@pytest.mark.parametrize(
+    "train,parameters",
+    [
+        (train_baseline_models, {}),
+        (train_random_forest_model, {"n_estimators": 10}),
+        (train_gradient_boosting_model, {"max_iter": 10}),
+        (train_tuned_models, {}),
+    ],
+)
+def test_train_models(train, parameters):
     dataset = make_dataset()
     dataset = dataset[dataset["label"].notna()].reset_index(drop=True)
     X, y = prepare_supervised_data(dataset)
 
-    models = train_baseline_models(X, y)
+    models = train(X, y, **parameters)
+    if not isinstance(models, dict):
+        models = {"model": models}
 
     for model in models.values():
         predictions = model.predict(X)
         assert len(predictions) == len(dataset)
         assert set(predictions).issubset({0, 1})
+        probabilities = model.predict_proba(X)
+        assert probabilities.shape == (len(dataset), 2)
+        assert np.isfinite(probabilities).all()
+        assert np.all((0 <= probabilities) & (probabilities <= 1))
+        np.testing.assert_allclose(probabilities.sum(axis=1), 1)
 
 
 def test_create_random_forest_model():
@@ -42,18 +60,6 @@ def test_create_random_forest_model():
     assert model.min_samples_leaf == 5
 
 
-def test_train_random_forest_model():
-    dataset = make_dataset()
-    dataset = dataset[dataset["label"].notna()].reset_index(drop=True)
-    X, y = prepare_supervised_data(dataset)
-
-    model = train_random_forest_model(X, y, n_estimators=10)
-    predictions = model.predict(X)
-
-    assert len(predictions) == len(dataset)
-    assert set(predictions).issubset({0, 1})
-
-
 def test_create_gradient_boosting_model():
     model = create_gradient_boosting_model(max_iter=10)
 
@@ -61,18 +67,6 @@ def test_create_gradient_boosting_model():
     assert model.learning_rate == 0.1
     assert model.max_iter == 10
     assert model.max_leaf_nodes == 31
-
-
-def test_train_gradient_boosting_model():
-    dataset = make_dataset()
-    dataset = dataset[dataset["label"].notna()].reset_index(drop=True)
-    X, y = prepare_supervised_data(dataset)
-
-    model = train_gradient_boosting_model(X, y, max_iter=10)
-    predictions = model.predict(X)
-
-    assert len(predictions) == len(dataset)
-    assert set(predictions).issubset({0, 1})
 
 
 def test_create_tuned_models():
@@ -90,16 +84,3 @@ def test_create_tuned_models():
     assert hgb.l2_regularization == 1.0
     assert hgb.class_weight == "balanced"
     assert hgb.early_stopping is False
-
-
-def test_train_tuned_models():
-    dataset = make_dataset()
-    dataset = dataset[dataset["label"].notna()].reset_index(drop=True)
-    X, y = prepare_supervised_data(dataset)
-
-    models = train_tuned_models(X, y)
-
-    for model in models.values():
-        predictions = model.predict(X)
-        assert len(predictions) == len(dataset)
-        assert set(predictions).issubset({0, 1})

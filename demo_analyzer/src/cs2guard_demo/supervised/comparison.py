@@ -16,7 +16,7 @@ def aggregate_player_scores(
         raise ValueError("Scores must match dataset length")
 
     data = df[["match_id", "player_id", "label"]].copy()
-    data[score_name] = scores
+    data[score_name] = np.asarray(scores)
 
     if data.groupby(["match_id", "player_id"])["label"].nunique().max() > 1:
         raise ValueError("Inconsistent player labels")

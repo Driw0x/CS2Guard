@@ -31,10 +31,13 @@ def test_save_and_load_model_bundle(tmp_path):
     assert metadata_path.exists()
     assert loaded_metadata == metadata
     assert np.array_equal(model.predict(X), loaded_model.predict(X))
+    np.testing.assert_allclose(model.predict_proba(X), loaded_model.predict_proba(X), rtol=1e-12, atol=1e-12)
+    assert loaded_model.feature_names_in_.tolist() == list(X.columns)
 
 
-def test_invalid_model_version(tmp_path):
+@pytest.mark.parametrize("name,version,error", [("", "v1", "model_name"), ("random_forest", "", "version")])
+def test_invalid_model_identity(tmp_path, name, version, error):
     model = create_tuned_models()["random_forest_tuned"]
 
-    with pytest.raises(ValueError, match="version"):
-        save_model_bundle(model, {}, tmp_path, "random_forest", "")
+    with pytest.raises(ValueError, match=error):
+        save_model_bundle(model, {}, tmp_path, name, version)

@@ -1,7 +1,8 @@
+from pathlib import Path
 import matplotlib.pyplot as plt
 
 
-def plot_aim_trajectory(sample_ticks: list[int], angular_distances: list[float], shot_ticks: list[int] | None=None, hit_ticks: list[int] | None=None, overshoot_ticks: list[int] | None=None, snap_windows: list[tuple[int, int]] | None=None, title: str='Aim trajectory', show: bool=True) -> None:
+def plot_aim_trajectory(sample_ticks: list[int], angular_distances: list[float], shot_ticks: list[int] | None=None, hit_ticks: list[int] | None=None, overshoot_ticks: list[int] | None=None, snap_windows: list[tuple[int, int]] | None=None, title: str='Aim trajectory', show: bool=True, output_path: str | Path | None=None, distance_label: str='Crosshair-to-target distance') -> None:
     if len(sample_ticks) != len(angular_distances):
         raise ValueError('sample_ticks and angular_distances must have the same length')
 
@@ -9,7 +10,7 @@ def plot_aim_trajectory(sample_ticks: list[int], angular_distances: list[float],
         raise ValueError('aim trajectory cannot be empty')
 
     plt.figure(figsize=(11, 6))
-    plt.plot(sample_ticks, angular_distances, marker='o', label='Crosshair-to-target distance')
+    plt.plot(sample_ticks, angular_distances, marker='o', label=distance_label)
 
     if shot_ticks:
         for index, shot_tick in enumerate(shot_ticks):
@@ -44,6 +45,9 @@ def plot_aim_trajectory(sample_ticks: list[int], angular_distances: list[float],
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
+
+    if output_path is not None:
+        plt.savefig(output_path)
 
     if show:
         plt.show()

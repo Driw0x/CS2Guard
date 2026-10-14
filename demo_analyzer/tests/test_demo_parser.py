@@ -1,8 +1,12 @@
 import pandas as pd
+import pytest
 from cs2guard_demo.parser import DemoParser
 
 
 class FakeParser:
+
+    def parse_header(self):
+        return {'map_name': 'de_test', 'patch_version': 123, 'demo_version_name': 'valve_demo_2'}
 
     def parse_ticks(self, fields):
         return pd.DataFrame({'tick': [50, 100, 101, 102], 'steamid': [1, 1, 2, 2], 'name': ['PlayerA', 'PlayerA', 'PlayerB', 'PlayerB'], 'team_name': ['CT', 'CT', 'TERRORIST', None], 'X': [10.0, 20.0, 30.0, None], 'Y': [15.0, 25.0, 35.0, None], 'Z': [5.0, 6.0, 7.0, None], 'yaw': [90.0, 100.0, 110.0, None], 'pitch': [5.0, 10.0, 15.0, None]})
@@ -68,6 +72,24 @@ def test_get_rounds():
     assert rounds[1].reason == 'bomb_exploded'
 
 
+@pytest.mark.parametrize('problem', ['missing_start', 'duplicate_end'])
+def test_round_events_do_not_create_overlapping_rounds(monkeypatch, problem):
+    parser = create_parser()
+    starts = pd.DataFrame({'tick': [100, 200, 300]})
+    ends = pd.DataFrame({'tick': [180, 280, 380], 'winner': ['CT'] * 3, 'reason': ['t_killed'] * 3})
+    if problem == 'missing_start':
+        starts = starts[starts['tick'] != 300]
+    else:
+        ends = pd.concat([ends.iloc[:1], ends], ignore_index=True)
+    monkeypatch.setattr(parser.parser, 'parse_event', lambda name: starts if name == 'round_start' else ends)
+    rounds = parser.get_rounds()
+    assert [(r.start_tick, r.end_tick) for r in rounds] == (
+        [(100, 180), (200, 280)] if problem == 'missing_start' else [(100, 180), (200, 280), (300, 380)]
+    )
+    assert all(a.end_tick < b.start_tick for a, b in zip(rounds, rounds[1:]))
+    assert [r.number for r in rounds] == list(range(1, len(rounds) + 1))
+
+
 def test_get_shots():
     parser = create_parser()
     shots = parser.get_shots()
@@ -109,3 +131,63 @@ def test_get_events():
     assert len(events) == 3
     assert [event.event_type for event in events] == ['shot', 'hit', 'kill']
     assert [event.tick for event in events] == [120, 130, 150]
+    assert events[0].data['steamid'] == 1
+    assert events[1].data['attacker_steamid'] == 1
+    assert events[1].data['victim_steamid'] == 2
+    assert events[2].data['headshot'] is True
+
+
+def test_missing_demo_is_rejected(tmp_path):
+    with pytest.raises(FileNotFoundError, match='Demo file not found'):
+        DemoParser(tmp_path / 'missing.dem')
+
+
+def test_invalid_demo_backend_error_is_preserved(tmp_path, monkeypatch):
+    demo_path = tmp_path / 'invalid.dem'
+    demo_path.write_text('invalid', encoding='utf-8')
+
+    def reject_demo(path):
+        raise ValueError('Invalid demo header')
+
+    monkeypatch.setattr('cs2guard_demo.parser.demo_parser.Demoparser2', reject_demo)
+    with pytest.raises(ValueError, match='Invalid demo header'):
+        DemoParser(demo_path)
+
+
+def test_match_start_uses_latest_begin_new_match(monkeypatch):
+    parser = create_parser()
+    monkeypatch.setattr(parser.parser, 'parse_event', lambda _: pd.DataFrame({'tick': [10, 100]}))
+    assert parser._get_match_start_tick() == 100
+
+
+def test_match_start_is_required(monkeypatch):
+    parser = create_parser()
+    monkeypatch.setattr(parser.parser, 'parse_event', lambda _: pd.DataFrame())
+    with pytest.raises(ValueError, match='Unable to find the beginning of the match'):
+        parser._get_match_start_tick()
+
+
+@pytest.mark.parametrize('include_ticks', [False, True])
+def test_normalized_match(include_ticks):
+    match = create_parser().get_match(include_ticks=include_ticks)
+    assert (match.map_name, match.patch_version, match.demo_version) == ('de_test', 123, 'valve_demo_2')
+    assert [player.steamid for player in match.players] == [1, 2]
+    assert [round.number for round in match.rounds] == [1, 2]
+    assert [event.tick for event in match.events] == [120, 130, 150]
+    assert [tick.tick for tick in match.ticks] == ([100, 101] if include_ticks else [])
+    if include_ticks:
+        assert (match.ticks[0].steamid, match.ticks[0].yaw, match.ticks[0].team) == (1, 100.0, 'CT')
+
+
+def test_empty_game_data_preserves_schemas(monkeypatch):
+    parser = create_parser()
+    monkeypatch.setattr(parser.parser, 'parse_event', lambda _: pd.DataFrame())
+    monkeypatch.setattr(parser.parser, 'parse_ticks', lambda _: pd.DataFrame())
+    assert list(parser.get_shots().columns) == ['tick', 'user_steamid', 'user_name', 'weapon']
+    assert {'tick', 'attacker_steamid', 'user_steamid'} <= set(parser.get_hits().columns)
+    assert {'tick', 'attacker_steamid', 'user_steamid'} <= set(parser.get_kills().columns)
+    assert parser.get_player_ticks_df().empty
+    assert parser.get_player_teams().empty
+    assert parser.get_players() == []
+    assert parser.get_rounds() == []
+    assert parser.get_events() == []

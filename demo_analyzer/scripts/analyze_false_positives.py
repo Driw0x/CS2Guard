@@ -2,19 +2,12 @@ from pathlib import Path
 
 import pandas as pd
 
+from cs2guard_demo.detection import FEATURE_COLUMNS
+
 ROOT = Path(__file__).resolve().parents[1]
 PLAYER_INPUT = ROOT / "data" / "processed" / "lof_players.csv"
 WINDOW_INPUT = ROOT / "data" / "processed" / "lof_windows.csv"
 BASELINE_INPUT = ROOT / "data" / "processed" / "legitimate_baseline.csv"
-
-FEATURE_COLUMNS = [
-    "mean_angular_speed",
-    "max_angular_speed",
-    "std_angular_speed",
-    "mean_angular_acceleration",
-    "max_angular_acceleration",
-    "std_angular_acceleration",
-]
 
 TOP_PLAYERS = 10
 TOP_WINDOWS = 3

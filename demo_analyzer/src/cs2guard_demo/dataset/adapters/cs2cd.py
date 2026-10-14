@@ -89,6 +89,7 @@ class CS2CDAdapter:
                 selected_columns.append(column)
 
         ticks = ticks[selected_columns].copy()
+        ticks = ticks.replace([float('inf'), float('-inf')], float('nan'))
         ticks = ticks.dropna(subset=['tick', 'steamid', 'X', 'Y', 'Z', 'yaw', 'pitch'])
         ticks['source_player_id'] = ticks['steamid'].astype(str)
         ticks['player_id'] = ticks['source_player_id'].map(self._canonical_player_id)

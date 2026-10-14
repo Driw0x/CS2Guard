@@ -36,7 +36,7 @@ class DemoAdapter:
 
     def get_ticks(self) -> pd.DataFrame:
         ticks = self.parser.get_player_ticks_df().copy()
-        ticks = ticks.replace([float("inf"), float("-inf")], pd.NA)
+        ticks = ticks.replace([float("inf"), float("-inf")], float("nan"))
         ticks = ticks.dropna(subset=["tick", "steamid", "X", "Y", "Z", "yaw", "pitch"])
 
         if ticks.empty:

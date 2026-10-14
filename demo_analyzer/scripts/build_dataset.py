@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from cs2guard_demo.dataset import DatasetBuilder, validate_aim_feature_schema, validate_event_schema, validate_tick_schema
+from cs2guard_demo.dataset import EVENT_COLUMNS, TICK_COLUMNS, DatasetBuilder, validate_aim_feature_schema, validate_event_schema, validate_tick_schema
 from cs2guard_demo.dataset.adapters import CS2CDAdapter, DemoAdapter
 
 DEMO_DIRECTORY = Path("data/raw/train_sources/demo")
@@ -17,6 +17,15 @@ OUTPUT_FILES = {
     "ticks": "ticks.csv",
     "windows": "temporal_windows.csv",
     "features": "aim_features.csv",
+}
+# Optional columns differ between demo and CS2CD sources. Keep CSV headers stable.
+OUTPUT_COLUMNS = {
+    "events": EVENT_COLUMNS + ["player_name", "map_name", "patch_version", "demo_version", "weapon",
+                                "victim_id", "victim_source_player_id", "victim_name", "damage_health",
+                                "damage_armor", "victim_health", "victim_armor", "hitgroup", "headshot",
+                                "distance", "noscope", "penetrated", "thrusmoke", "attacker_blind", "attacker_in_air"],
+    "ticks": TICK_COLUMNS + ["player_name", "team_name", "weapon", "active_weapon_name", "health",
+                             "armor_value", "is_alive", "is_airborne", "velocity_X", "velocity_Y", "velocity_Z"],
 }
 
 
@@ -109,8 +118,24 @@ def prepare_build(resume: bool) -> dict:
 
 
 def append_dataframe(name: str, dataframe: pd.DataFrame) -> None:
+    if dataframe.empty:
+        return
+
+    if name in OUTPUT_COLUMNS:
+        columns = OUTPUT_COLUMNS[name]
+        extra_columns = set(dataframe.columns) - set(columns)
+
+        if extra_columns:
+            raise ValueError(f"Unsupported {name} output columns: {sorted(extra_columns)}")
+
+        dataframe = dataframe.reindex(columns=columns)
+
     path = output_path(name)
     header = not path.exists() or path.stat().st_size == 0
+
+    if not header and list(pd.read_csv(path, nrows=0).columns) != list(dataframe.columns):
+        raise ValueError(f"Incompatible existing {name} CSV header; rebuild without --resume.")
+
     dataframe.to_csv(path, mode="a", header=header, index=False)
 
 
@@ -125,17 +150,7 @@ def validate_chunk(events: pd.DataFrame, ticks: pd.DataFrame, features: pd.DataF
         validate_aim_feature_schema(features)
 
 
-def build_demo_chunk(builder: DatasetBuilder, demo_path: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    adapter = DemoAdapter(demo_path)
-    events = adapter.get_events()
-    ticks = adapter.get_ticks()
-    windows = builder.build_canonical_temporal_windows(ticks, events, window_size=32)
-    features = builder.build_aim_features(windows)
-    return events, ticks, windows, features
-
-
-def build_cs2cd_chunk(builder: DatasetBuilder, json_path: Path, parquet_path: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    adapter = CS2CDAdapter(json_path, parquet_path)
+def build_chunk(builder: DatasetBuilder, adapter: DemoAdapter | CS2CDAdapter) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     events = adapter.get_events()
     ticks = adapter.get_ticks()
     windows = builder.build_canonical_temporal_windows(ticks, events, window_size=32)
@@ -215,11 +230,12 @@ def main() -> None:
         print(f"Processing {source_type}: {path}")
 
         if source_type == "demo":
-            events, ticks, windows, features = build_demo_chunk(builder, path)
+            adapter = DemoAdapter(path)
         else:
             assert extra_path is not None
-            events, ticks, windows, features = build_cs2cd_chunk(builder, path, extra_path)
+            adapter = CS2CDAdapter(path, extra_path)
 
+        events, ticks, windows, features = build_chunk(builder, adapter)
         validate_chunk(events, ticks, features)
         append_dataframe("events", events)
         append_dataframe("ticks", ticks)

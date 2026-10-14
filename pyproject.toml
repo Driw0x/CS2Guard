@@ -14,7 +14,11 @@ dependencies = [
     "numpy",
     "scikit-learn",
     "joblib",
+    "matplotlib",
 ]
+
+[project.scripts]
+cs2guard = "cs2guard_demo.cli:main"
 
 [project.optional-dependencies]
 dev = [

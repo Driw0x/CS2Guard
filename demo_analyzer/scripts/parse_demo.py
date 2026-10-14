@@ -2,7 +2,6 @@ from pathlib import Path
 from cs2guard_demo.parser import DemoParser
 
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
 DEMO_PATH = Path('data/raw/train_sources/demo/test.dem')
 
 

@@ -182,6 +182,9 @@ class DatasetBuilder:
         return pd.DataFrame(player_rows)
 
     def build_temporal_windows(self, demo_directory: str | Path, window_size: int=32) -> pd.DataFrame:
+        if window_size <= 0:
+            raise ValueError('window_size must be greater than zero')
+
         demo_directory = Path(demo_directory)
         rows = []
         demo_files = sorted(demo_directory.glob('*.dem'))
@@ -192,13 +195,15 @@ class DatasetBuilder:
             shots = parser.get_shots()
             required_tick_columns = ['tick', 'steamid', 'X', 'Y', 'Z', 'yaw', 'pitch']
             ticks = ticks.dropna(subset=required_tick_columns).copy()
-            ticks = ticks.replace([float('inf'), float('-inf')], pd.NA)
+            ticks = ticks.replace([float('inf'), float('-inf')], float('nan'))
             ticks = ticks.dropna(subset=required_tick_columns)
 
             if ticks.empty or shots.empty:
                 continue
 
-            for shot in shots.itertuples(index=False):
+            ticks_by_player = {steamid: player_ticks.sort_values('tick') for steamid, player_ticks in ticks.groupby('steamid', sort=False)}
+
+            for shot in shots.drop_duplicates(['user_steamid', 'tick']).itertuples(index=False):
                 shot_tick = safe_int(shot.tick)
                 steamid = safe_int(shot.user_steamid)
 
@@ -208,11 +213,16 @@ class DatasetBuilder:
                 if is_ignored_weapon(shot.weapon):
                     continue
 
-                player_ticks = ticks[ticks['steamid'] == steamid]
-                window = player_ticks[(player_ticks['tick'] <= shot_tick) & (player_ticks['tick'] >= shot_tick - window_size + 1)].copy()
-                window = window.sort_values('tick').tail(window_size)
+                player_ticks = ticks_by_player.get(steamid)
 
-                if len(window) < window_size:
+                if player_ticks is None:
+                    continue
+
+                start = player_ticks['tick'].searchsorted(shot_tick - window_size + 1)
+                end = player_ticks['tick'].searchsorted(shot_tick, side='right')
+                window = player_ticks.iloc[start:end]
+
+                if len(window) < window_size or not window['tick'].is_unique:
                     continue
 
                 window_id = f'{demo_path.stem}_{steamid}_{shot_tick}'
@@ -240,7 +250,7 @@ class DatasetBuilder:
         if missing_event_columns:
             raise ValueError(f'Missing canonical event columns: {missing_event_columns}')
 
-        ticks = ticks.replace([float('inf'), float('-inf')], pd.NA)
+        ticks = ticks.replace([float('inf'), float('-inf')], float('nan'))
         ticks = ticks.dropna(subset=['match_id', 'player_id', 'tick', 'x', 'y', 'z', 'yaw', 'pitch']).copy()
         shots = events[events['event_type'] == 'shot'].copy()
 
@@ -248,18 +258,24 @@ class DatasetBuilder:
             return pd.DataFrame()
 
         rows = []
+        ticks_by_player = {key: player_ticks.sort_values('tick') for key, player_ticks in ticks.groupby(['match_id', 'player_id'], sort=False)}
 
-        for shot in shots.itertuples(index=False):
+        for shot in shots.drop_duplicates(['match_id', 'player_id', 'tick']).itertuples(index=False):
             shot_tick = safe_int(shot.tick)
 
             if shot_tick is None:
                 continue
 
-            player_ticks = ticks[(ticks['match_id'] == shot.match_id) & (ticks['player_id'] == shot.player_id)]
-            window = player_ticks[(player_ticks['tick'] <= shot_tick) & (player_ticks['tick'] >= shot_tick - window_size + 1)].copy()
-            window = window.sort_values('tick').tail(window_size)
+            player_ticks = ticks_by_player.get((shot.match_id, shot.player_id))
 
-            if len(window) < window_size:
+            if player_ticks is None:
+                continue
+
+            start = player_ticks['tick'].searchsorted(shot_tick - window_size + 1)
+            end = player_ticks['tick'].searchsorted(shot_tick, side='right')
+            window = player_ticks.iloc[start:end]
+
+            if len(window) < window_size or not window['tick'].is_unique:
                 continue
 
             window_id = f'{shot.match_id}_{shot.player_id}_{shot_tick}'

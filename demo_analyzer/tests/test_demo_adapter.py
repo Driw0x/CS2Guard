@@ -1,4 +1,5 @@
 from pathlib import Path
+import importlib.util
 import pandas as pd
 
 import cs2guard_demo.dataset.adapters.demo as demo_module
@@ -147,3 +148,37 @@ def test_demo_adapter_to_aim_features(tmp_path, monkeypatch):
     ]
 
     assert features[feature_columns].notna().all().all()
+
+
+def test_demo_adapter_drops_invalid_tick_data(tmp_path, monkeypatch):
+    demo_path = tmp_path / 'match.dem'
+    demo_path.touch()
+    ticks = pd.DataFrame({'tick': [100, 101, 102, 103], 'steamid': [1, 1, 0, 1],
+                          'name': ['Player', 'Player', 'Invalid', '   '], 'X': [0.0, float('inf'), 0.0, 0.0],
+                          'Y': [0.0] * 4, 'Z': [0.0] * 4, 'yaw': [0.0] * 4, 'pitch': [0.0] * 4})
+    monkeypatch.setattr(demo_module, 'DemoParser', FakeDemoParser)
+    monkeypatch.setattr(FakeDemoParser, 'get_player_ticks_df', lambda _: ticks)
+    result = DemoAdapter(demo_path).get_ticks()
+    assert result['tick'].tolist() == [100]
+    assert result['player_id'].tolist() == ['demo:1']
+    validate_tick_schema(result)
+
+
+def test_validate_demo_handles_match_without_windows(tmp_path, monkeypatch, capsys):
+    demo_path = tmp_path / 'empty.dem'
+    demo_path.touch()
+    monkeypatch.setattr(demo_module, 'DemoParser', FakeDemoParser)
+    for method in ['get_player_ticks_df', 'get_shots', 'get_hits', 'get_kills']:
+        original = getattr(FakeDemoParser, method)
+        monkeypatch.setattr(FakeDemoParser, method, lambda self, original=original: original(self).iloc[:0])
+
+    path = Path(__file__).resolve().parents[1] / 'scripts' / 'validate_demo.py'
+    spec = importlib.util.spec_from_file_location('validate_demo_script', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module, 'DEMO_PATH', demo_path)
+    module.main()
+    output = capsys.readouterr().out
+    assert 'Windows: 0' in output
+    assert 'Aim features: 0' in output
+    assert 'Demo canonical validation: PASS' in output

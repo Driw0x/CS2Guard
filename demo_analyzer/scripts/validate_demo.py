@@ -19,6 +19,7 @@ def main() -> None:
     builder = DatasetBuilder()
     windows = builder.build_canonical_temporal_windows(ticks, events, window_size=32)
     features = builder.build_aim_features(windows)
+    window_count = windows['window_id'].nunique() if not windows.empty else 0
 
     if not features.empty:
         validate_aim_feature_schema(features)
@@ -36,7 +37,7 @@ def main() -> None:
 
     print()
     print("=== M2 FEATURES ===")
-    print(f"Windows: {windows['window_id'].nunique() if not windows.empty else 0}")
+    print(f"Windows: {window_count}")
     print(f"Window rows: {len(windows)}")
     print(f"Aim features: {len(features)}")
 
@@ -50,7 +51,7 @@ def main() -> None:
     assert ticks["identity_scope"].eq("global").all()
     assert events["player_id"].notna().all()
     assert ticks["player_id"].notna().all()
-    assert len(features) == windows["window_id"].nunique()
+    assert len(features) == window_count
 
     print()
     print("Demo canonical validation: PASS")

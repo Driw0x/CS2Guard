@@ -2,7 +2,21 @@ import pandas as pd
 from sklearn.metrics import average_precision_score, confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score
 
 
+def print_metrics(name: str, metrics: dict[str, float | int]) -> None:
+    print(name)
+    print(f"  Precision: {metrics['precision']:.4f}")
+    print(f"  Recall:    {metrics['recall']:.4f}")
+    print(f"  F1-score:  {metrics['f1']:.4f}")
+    print(f"  ROC-AUC:   {metrics['roc_auc']:.4f}")
+    print(f"  PR-AUC:    {metrics['pr_auc']:.4f}")
+    print(f"  FPR:       {metrics['false_positive_rate']:.4f}")
+    print(f"  TN={metrics['tn']} FP={metrics['fp']} FN={metrics['fn']} TP={metrics['tp']}")
+
+
 def evaluate_predictions(y_test: pd.Series, predictions, probabilities) -> dict[str, float | int]:
+    if set(y_test) != {0, 1}:
+        raise ValueError("Both target classes are required")
+
     tn, fp, fn, tp = confusion_matrix(y_test, predictions, labels=[0, 1]).ravel()
 
     return {

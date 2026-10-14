@@ -1,5 +1,4 @@
 from pathlib import Path
-import pandas as pd
 from demoparser2 import DemoParser as Demoparser2
 from ..models.player import Player
 from ..models.round import Round
@@ -29,26 +28,46 @@ class DemoParser:
 
     def get_shots(self):
         shots = self.parser.parse_event('weapon_fire')
+        columns = ['tick', 'user_steamid', 'user_name', 'weapon']
+
+        if shots.empty:
+            return shots.reindex(columns=columns)
+
         shots = shots[shots['tick'] >= self.match_start_tick]
-        shots = shots[['tick', 'user_steamid', 'user_name', 'weapon']].dropna()
+        shots = shots[columns].dropna()
         shots['tick'] = shots['tick'].astype(int)
         shots['user_steamid'] = shots['user_steamid'].astype(int)
         return shots.reset_index(drop=True)
 
     def get_hits(self):
         hits = self.parser.parse_event('player_hurt')
+        columns = ['tick', 'attacker_steamid', 'attacker_name', 'user_steamid', 'user_name', 'weapon', 'dmg_health', 'dmg_armor', 'health', 'armor', 'hitgroup']
+
+        if hits.empty:
+            return hits.reindex(columns=columns)
+
         hits = hits[hits['tick'] >= self.match_start_tick]
-        return hits[['tick', 'attacker_steamid', 'attacker_name', 'user_steamid', 'user_name', 'weapon', 'dmg_health', 'dmg_armor', 'health', 'armor', 'hitgroup']].dropna(subset=['attacker_steamid', 'user_steamid']).reset_index(drop=True)
+        return hits[columns].dropna(subset=['attacker_steamid', 'user_steamid']).reset_index(drop=True)
 
     def get_kills(self):
         kills = self.parser.parse_event('player_death')
+        columns = ['tick', 'attacker_steamid', 'attacker_name', 'user_steamid', 'user_name', 'weapon', 'headshot', 'distance', 'hitgroup', 'noscope', 'penetrated', 'thrusmoke', 'attackerblind', 'attackerinair']
+
+        if kills.empty:
+            return kills.reindex(columns=columns)
+
         kills = kills[kills['tick'] >= self.match_start_tick]
-        return kills[['tick', 'attacker_steamid', 'attacker_name', 'user_steamid', 'user_name', 'weapon', 'headshot', 'distance', 'hitgroup', 'noscope', 'penetrated', 'thrusmoke', 'attackerblind', 'attackerinair']].dropna(subset=['user_steamid']).reset_index(drop=True)
+        return kills[columns].dropna(subset=['user_steamid']).reset_index(drop=True)
 
     def get_player_ticks_df(self):
         ticks = self.parser.parse_ticks(['X', 'Y', 'Z', 'yaw', 'pitch', 'team_name'])
+        columns = ['tick', 'steamid', 'name', 'team_name', 'X', 'Y', 'Z', 'yaw', 'pitch']
+
+        if ticks.empty:
+            return ticks.reindex(columns=columns)
+
         ticks = ticks[ticks['tick'] >= self.match_start_tick]
-        return ticks[['tick', 'steamid', 'name', 'team_name', 'X', 'Y', 'Z', 'yaw', 'pitch']].dropna().reset_index(drop=True)
+        return ticks[columns].dropna().reset_index(drop=True)
 
     def get_player_ticks(self) -> list[Tick]:
         ticks = self.get_player_ticks_df()
@@ -60,25 +79,38 @@ class DemoParser:
 
     def get_players(self) -> list[Player]:
         ticks = self.parser.parse_ticks(['team_name'])
+
+        if ticks.empty:
+            return []
+
         players_df = ticks[['steamid', 'name']].dropna(subset=['steamid']).drop_duplicates(subset=['steamid'])
         return [Player(steamid=int(row['steamid']), name=row['name']) for _, row in players_df.iterrows()]
 
     def get_player_teams(self):
         ticks = self.parser.parse_ticks(['team_name'])
+
+        if ticks.empty:
+            return ticks.reindex(columns=['tick', 'steamid', 'name', 'team_name'])
+
         return ticks[['tick', 'steamid', 'name', 'team_name']].dropna(subset=['steamid']).reset_index(drop=True)
 
     def get_rounds(self) -> list[Round]:
         starts = self.parser.parse_event('round_start')
         ends = self.parser.parse_event('round_end')
+
+        if ends.empty:
+            return []
+
+        starts = starts.reindex(columns=['tick'])
         starts = starts[starts['tick'] > self.match_start_tick].sort_values('tick').reset_index(drop=True)
-        ends = ends[ends['tick'] > self.match_start_tick].sort_values('tick').reset_index(drop=True)
+        ends = ends[ends['tick'] > self.match_start_tick].drop_duplicates('tick').sort_values('tick').reset_index(drop=True)
         rounds = []
 
         for index, end in ends.iterrows():
             if index == 0:
                 start_tick = self.match_start_tick
             else:
-                previous_starts = starts[starts['tick'] < end['tick']]
+                previous_starts = starts[(starts['tick'] > ends.iloc[index - 1]['tick']) & (starts['tick'] < end['tick'])]
 
                 if previous_starts.empty:
                     continue

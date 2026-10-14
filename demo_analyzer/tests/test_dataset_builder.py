@@ -1,5 +1,6 @@
 import math
 import pandas as pd
+import pytest
 from cs2guard_demo.dataset import DatasetBuilder, apply_labels, build_leakage_groups, create_dataset_splits, fit_normalization_stats, generate_dataset_statistics, normalize_features, validate_labels, validate_no_data_leakage
 from cs2guard_demo.dataset.builder import is_ignored_weapon, is_valid_player, safe_float, safe_int
 from cs2guard_demo.dataset.normalization import AIM_FEATURE_COLUMNS
@@ -48,18 +49,8 @@ def test_process_multiple_demos(monkeypatch, tmp_path):
     dataset = builder.build()
     assert dataset['match_id'].nunique() == 2
     assert set(dataset['match_id']) == {'match_a', 'match_b'}
-
-
-def test_event_level_samples(monkeypatch, tmp_path):
-    monkeypatch.setattr('cs2guard_demo.dataset.builder.DemoParser', FakeDemoParser)
-    create_fake_demos(tmp_path)
-    builder = DatasetBuilder()
-    builder.process_directory(tmp_path)
-    dataset = builder.build()
     assert len(dataset) == 12
-    assert (dataset['event_type'] == 'shot').sum() == 4
-    assert (dataset['event_type'] == 'hit').sum() == 4
-    assert (dataset['event_type'] == 'kill').sum() == 4
+    assert dataset['event_type'].value_counts().to_dict() == {'shot': 4, 'hit': 4, 'kill': 4}
     assert not dataset['weapon'].str.contains('knife', case=False).any()
     assert 'weapon_flashbang' not in dataset['weapon'].values
     self_hits = dataset[(dataset['event_type'] == 'hit') & (dataset['steamid'] == dataset['victim_steamid'])]
@@ -112,6 +103,89 @@ def test_aim_features(monkeypatch, tmp_path):
     for column in feature_columns:
         assert aim_features[column].notna().all()
         assert aim_features[column].map(math.isfinite).all()
+    assert aim_features['mean_angular_speed'].tolist() == pytest.approx([64.0 * math.hypot(1.0, 0.25)] * 4)
+    assert (aim_features['max_angular_acceleration'] == 0.0).all()
+
+
+def canonical_window_data():
+    ticks = []
+    events = []
+    for match_id, player_id, label, yaw_step in [('first', 'demo:1', 'legitimate', 1.0),
+                                                ('second', 'demo:1', 'suspicious', 2.0),
+                                                ('first', 'demo:2', None, 3.0)]:
+        identity = {'source': 'demo', 'match_id': match_id, 'player_id': player_id,
+                    'source_player_id': player_id.split(':')[-1], 'identity_scope': 'global', 'label': label}
+        for tick in range(100, 104):
+            ticks.append({**identity, 'tick': tick, 'x': 0.0, 'y': 0.0, 'z': 0.0,
+                          'yaw': (tick - 100) * yaw_step, 'pitch': 0.0})
+        events.append({**identity, 'tick': 103, 'event_type': 'shot', 'weapon': 'ak47'})
+    return pd.DataFrame(ticks), pd.DataFrame(events)
+
+
+def test_canonical_windows_preserve_match_player_and_label():
+    ticks, events = canonical_window_data()
+    builder = DatasetBuilder()
+    windows = builder.build_canonical_temporal_windows(ticks.sample(frac=1, random_state=7), events, window_size=4)
+    features = builder.build_aim_features(windows)
+    assert windows.groupby('window_id').size().tolist() == [4, 4, 4]
+    assert windows.groupby('window_id')['tick'].apply(list).tolist() == [[100, 101, 102, 103]] * 3
+    assert features[['match_id', 'player_id']].values.tolist() == [['first', 'demo:1'], ['second', 'demo:1'], ['first', 'demo:2']]
+    assert features['label'].iloc[:2].tolist() == ['legitimate', 'suspicious']
+    assert pd.isna(features['label'].iloc[2])
+    assert features['mean_angular_speed'].tolist() == [64.0, 128.0, 192.0]
+
+
+def test_duplicate_shots_do_not_duplicate_windows():
+    ticks, events = canonical_window_data()
+    windows = DatasetBuilder().build_canonical_temporal_windows(ticks, pd.concat([events, events]), window_size=4)
+    assert windows.groupby('window_id').size().tolist() == [4, 4, 4]
+
+
+@pytest.mark.parametrize('problem', ['missing', 'duplicate', 'nan', 'inf'])
+def test_canonical_windows_reject_incomplete_or_ambiguous_ticks(problem):
+    ticks, events = canonical_window_data()
+    ticks = ticks.iloc[:4].copy()
+    events = events.iloc[:1]
+    if problem == 'missing':
+        ticks = ticks.iloc[1:]
+    elif problem == 'duplicate':
+        ticks = pd.concat([ticks, ticks.iloc[:1]])
+    else:
+        ticks.loc[0, 'yaw'] = float(problem)
+    assert DatasetBuilder().build_canonical_temporal_windows(ticks, events, window_size=4).empty
+
+
+def test_canonical_windows_reject_missing_columns():
+    ticks, events = canonical_window_data()
+    with pytest.raises(ValueError, match='Missing canonical tick columns'):
+        DatasetBuilder().build_canonical_temporal_windows(ticks.drop(columns='player_id'), events)
+    with pytest.raises(ValueError, match='Missing canonical event columns'):
+        DatasetBuilder().build_canonical_temporal_windows(ticks, events.drop(columns='event_type'))
+
+
+def test_window_builders_reject_invalid_size(tmp_path):
+    ticks, events = canonical_window_data()
+    builder = DatasetBuilder()
+    with pytest.raises(ValueError, match='window_size must be greater than zero'):
+        builder.build_canonical_temporal_windows(ticks, events, window_size=0)
+    with pytest.raises(ValueError, match='window_size must be greater than zero'):
+        builder.build_temporal_windows(tmp_path, window_size=0)
+    assert builder.build_canonical_temporal_windows(pd.DataFrame(), events).empty
+    assert builder.build_canonical_temporal_windows(ticks, pd.DataFrame()).empty
+
+
+def test_aim_features_preserve_wraparound_and_irregular_time():
+    window = pd.DataFrame({'window_id': ['w'] * 3, 'match_id': ['match'] * 3, 'steamid': [1] * 3,
+                           'player_name': ['Player'] * 3, 'weapon': ['ak47'] * 3, 'shot_tick': [5] * 3,
+                           'window_offset': [0, 1, 2], 'tick': [0, 2, 5], 'yaw': [179.0, -179.0, -174.0], 'pitch': [0.0] * 3})
+    builder = DatasetBuilder()
+    feature = builder.build_aim_features(window).iloc[0]
+    assert feature['mean_angular_speed'] == pytest.approx((64.0 + 5.0 / (3.0 / 64.0)) / 2.0)
+    assert feature['max_angular_acceleration'] == pytest.approx((5.0 / (3.0 / 64.0) - 64.0) / (3.0 / 64.0))
+    assert feature['std_angular_acceleration'] == 0.0
+    assert builder.build_aim_features(window.iloc[:2]).empty
+    window['tick'] = [0, 0, 5]
+    assert builder.build_aim_features(window).empty
 
 
 def test_invalid_data_helpers():
@@ -342,3 +416,16 @@ def test_statistics_include_labels_and_splits():
     stats = generate_dataset_statistics(empty, empty, empty, aim_features)
     assert stats['aim_features']['labels'] == {'legitimate': 2, 'suspicious': 1}
     assert stats['aim_features']['splits'] == {'train': 1, 'validation': 1, 'test': 1}
+
+
+def test_statistics_count_canonical_player_identities():
+    ticks, events = canonical_window_data()
+    builder = DatasetBuilder()
+    windows = builder.build_canonical_temporal_windows(ticks, events, window_size=4)
+    features = builder.build_aim_features(windows)
+    statistics = generate_dataset_statistics(events, events[['match_id', 'player_id']], windows, features)
+    assert statistics['events']['players'] == 2
+    assert statistics['players']['unique_players'] == 2
+    assert statistics['aim_features']['players'] == 2
+    assert statistics['aim_features']['matches'] == 2
+    assert statistics['temporal_windows']['windows'] == 3

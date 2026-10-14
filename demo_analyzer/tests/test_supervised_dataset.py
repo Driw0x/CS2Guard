@@ -92,6 +92,9 @@ def test_split_labeled_dataset():
     assert set(train["label"]) == {"legitimate", "suspicious"}
     assert set(test["label"]) == {"legitimate", "suspicious"}
     assert len(train) + len(test) == 10
+    repeated_train, repeated_test = split_labeled_dataset(make_dataset(), test_size=0.2, random_state=42)
+    pd.testing.assert_frame_equal(train, repeated_train)
+    pd.testing.assert_frame_equal(test, repeated_test)
 
 
 def test_prepare_supervised_data():
@@ -101,6 +104,19 @@ def test_prepare_supervised_data():
     assert list(X.columns) == FEATURE_COLUMNS
     assert set(y.unique()) == {0, 1}
     assert len(X) == len(y) == 10
+
+
+def test_prepare_supervised_data_rejects_unlabeled_samples():
+    with pytest.raises(ValueError, match="Unknown labels"):
+        prepare_supervised_data(make_dataset())
+
+
+def test_split_rejects_missing_class():
+    df = make_dataset()
+    df["label"] = "legitimate"
+
+    with pytest.raises(ValueError, match="both contain all labels"):
+        split_labeled_dataset(df)
 
 
 def test_invalid_test_size():

@@ -1,3 +1,6 @@
+import pandas as pd
+import pytest
+
 from cs2guard_demo.supervised import build_labeled_dataset, create_group_cv, prepare_supervised_data, tune_gradient_boosting, tune_random_forest
 from tests.test_supervised_dataset import make_dataset
 
@@ -10,7 +13,8 @@ def prepare_test_data():
 
 
 def test_group_cv():
-    dataset, X, y = prepare_test_data()
+    dataset = pd.concat([build_labeled_dataset(make_dataset())] * 2, ignore_index=True)
+    X, y = prepare_supervised_data(dataset)
     groups = dataset["match_id"]
     cv = create_group_cv(n_splits=2)
 
@@ -19,6 +23,12 @@ def test_group_cv():
         test_groups = set(groups.iloc[test_idx])
 
         assert train_groups.isdisjoint(test_groups)
+        assert len(train_idx) + len(test_idx) == len(dataset)
+
+
+def test_group_cv_rejects_one_fold():
+    with pytest.raises(ValueError, match="n_splits"):
+        create_group_cv(n_splits=1)
 
 
 def test_tune_random_forest():

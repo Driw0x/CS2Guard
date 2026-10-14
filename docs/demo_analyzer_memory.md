@@ -229,9 +229,9 @@ Large acceleration values can occur naturally because of flicks, rapid direction
 
 Individual tick-to-tick measurements can be noisy and provide only a very local description of player behavior.
 
-M2 therefore also computes rolling statistics over consecutive samples. These temporal features summarize short aim sequences and provide more stable information for later analysis.
+The current implementation computes statistics over selected temporal windows, not a sliding rolling-statistics series. These temporal features summarize short aim sequences and provide more stable information for later analysis.
 
-The rolling calculations are designed around demo tick data; their interpretation must remain aware of CS2's tick/subtick recording behavior.
+The temporal calculations are designed around demo tick data; their interpretation must remain aware of CS2's tick/subtick recording behavior.
 
 ## Shot-Centered Aim Sequences
 
@@ -278,11 +278,11 @@ Aim feature extraction is kept separate from demo ingestion.
 Conceptually:
 
 ```text
-src/cs2guard/ingestion/demo/
+src/cs2guard_demo/parser/
         ↓
 normalized tick/event data
         ↓
-src/cs2guard/features/aim/
+src/cs2guard_demo/features/aim.py
         ↓
 aim features
         ↓
@@ -461,11 +461,11 @@ Conceptually:
 ```text
 Demo files / external datasets
         ↓
-src/cs2guard/ingestion/
+src/cs2guard_demo/dataset/adapters/
         ↓
 canonical CS2Guard data
         ↓
-src/cs2guard/features/
+src/cs2guard_demo/features/
         ↓
 dataset builder
         ↓
@@ -1570,10 +1570,536 @@ M5 provides the supervised detection model required for the usable offline Demo 
 
 ---
 
+# M6 — Demo Analyzer
+
+## Scope and reference state
+
+The audit and implementation on 2026-10-14 preserve the README roadmap: M6 is offline demo analysis. Server-side streaming remains M9/M10; `server_side/` is unchanged.
+The initial branch was `main`, with no tracked local changes. The project uses a setuptools `src` layout and canonical `cs2guard_demo` imports.
+All Python sources, the 20 historical scripts, tests, package/test configuration, architecture documentation and persisted M5 metadata were inspected.
+Model artifacts, datasets and research outputs were retained.
+
+The existing `.venv` uses Python 3.13.1, pytest 9.1.1, NumPy 2.5.2, pandas 3.0.5, scikit-learn 1.9.1, demoparser2 0.42.0, Matplotlib 3.11.1 and joblib 1.6.0.
+The system Python lacks demoparser2; commands therefore use the project environment.
+The installed persisted model is a 150-tree RandomForestClassifier, with classes `[0, 1]` and the six expected feature names in their training order.
+It loads without a compatibility warning. Its model and JSON files remain unchanged.
+
+The baseline before any code changes was **179 passed, 0 failed, 0 skipped**.
+An earlier default sandbox run had **163 passed and 16 fixture setup errors**, caused by an inaccessible system temporary directory, not application failures.
+A repository-local `--basetemp` established the clean baseline. This workaround was later removed at the user's request; final tests use native pytest system temporary directories with approved filesystem access.
+
+## Confirmed audit findings and actions
+
+Paths in this table are relative to `demo_analyzer/` unless stated otherwise.
+
+| File / symbol | Problem | Evidence | Action | Risk |
+|---|---|---|---|---|
+| `src/cs2guard_demo/parser/events.py`, `utils/logger.py` | Dead placeholders | Empty files, no Python/documentation references, no exported implementation | Deleted only these two files | Low |
+| `parser/demo_parser.py` pandas import; `scripts/parse_demo.py`, `visualize_aim.py` `ROOT_DIR` | Unused import/variables | AST and reference checks show declaration only | Removed | Low |
+| `DemoParser` shots/hits/kills/ticks/players/teams/rounds | Empty backend frames raise `KeyError` | Controlled backend returns `DataFrame()` without columns | Preserve empty output schemas/lists | Low; nonempty behavior unchanged |
+| `DatasetBuilder.build_temporal_windows`, `build_canonical_temporal_windows` | Duplicate shot/tick rows corrupt windows | Repeated shot duplicates one `window_id`; repeated tick can satisfy row count without complete timeline | Deduplicate shots, reject ambiguous tick windows | Medium; invalid/duplicate input behavior deliberately corrected |
+| Same window builders | Repeated full-tick scans | Entire tick frame filtered per shot | Group and sort once, select bounds using `searchsorted` | Low; exact feature results tested |
+| `dataset/builder.py`, `dataset/adapters/demo.py` | Infinity replacement crashes in installed pandas | Regression fixture reproduces `IndexError: pop index out of range` with `pd.NA` | Replace infinity with NaN before existing exclusion | Low; exclusion semantics preserved |
+| `dataset/adapters/cs2cd.py` | Infinite telemetry survives normalization | Synthetic NaN/Inf data | Remove invalid required telemetry | Low |
+| `scripts/build_dataset.py::append_dataframe` | CSV headers differ between sources; empty chunks affect later header | Different optional fields and ordering in Demo/CS2CD fixtures | Stable existing-field union, skip empty chunks, reject unknown fields/incompatible resume headers | Medium; legacy interrupted CSVs may need rebuilding |
+| `scripts/build_dataset.py::build_demo_chunk/build_cs2cd_chunk` | Identical feature pipeline | Only adapter construction differs | Reuse `build_chunk(builder, adapter)` | Low |
+| `dataset/statistics.py::generate_dataset_statistics` | Canonical datasets count zero players | Function reads only `steamid`, absent from canonical schema | Prefer `player_id`, retain legacy fallback | Low |
+| `dataset/labels.py`, `statistics.py`, `detection/anomaly.py`, `scripts/analyze_false_positives.py` | Duplicate labels/six-feature lists | Identical constants in multiple modules | Import existing schema/normalization constants | Low; order checked |
+| `scripts/validate_demo.py` | Empty windows raise `KeyError: window_id` | Test runs actual script `main()` with empty data | Reuse conditional window count | Low |
+| `supervised/comparison.py::aggregate_player_scores` | Series aligns by unrelated pandas index | Dataset index `[10,11]`, scores index `[0,1]` yield NaN | Positional `np.asarray(scores)` assignment | Low; ndarray scripts unchanged |
+| `supervised/evaluation.py::evaluate_predictions` | Single-class targets return undefined metrics | One-class ROC-AUC/FPR produce NaN | Explicit error unless both 0/1 classes exist | Low; valid historical metrics unchanged |
+| `scripts/train_supervised.py`, `evaluate_tuned_supervised.py::print_metrics` | Identical metric printing | Same fields/formats | Reuse existing evaluation module function | Low; output checked |
+| `visualization/aim.py::plot_aim_trajectory` | No saved output for M6 | Figure closes without export | Optional `output_path` and `distance_label`; default behavior unchanged | Low |
+| M1–M5 test cases | Genuine duplicate work | Event test repeats exact multi-demo fixture; detector/training tests repeat setup/assertions | Merge event assertions; parameterize model cases | Low; independent coverage retained |
+
+The following similarities were reviewed and **retained**, rather than treated as confirmed dead code:
+
+| Symbol / family | Reason to retain |
+|---|---|
+| Legacy DatasetBuilder event/window API vs DemoAdapter canonical API | Different identity schemes, output structures and public callers; merging would introduce conversions |
+| M4 vs M5 player aggregation | M4 uses six identity keys and mean/max/anomaly ratio; M5 uses match/player and mean score |
+| Transductive M4 LOF vs held-out M5 novelty LOF | Different evaluation tasks; training-only scaler in held-out path is essential |
+| M2 acquisition/tracking/reaction/correction/snap helpers | Public exports, independent tested behaviors and experimental visualization callers |
+| Historical scripts and persisted research artifacts | Distinct experiments, documented usage and reproducibility value |
+| Similar adapter fixtures | Source formats and normalization responsibilities differ |
+| Full parser player roster, including possible warmup participants | Historical semantics may be useful; M6 retains players and marks absent evidence instead of silently discarding them |
+
+Scientific formulas, angular wrapping, tick units, population standard deviations (`ddof=0`), scaler fitting, feature ordering, model parameters, grouped splitting, LOF score signs and ECDF calibration remain unchanged for valid historical data.
+No production threshold or new calibration is introduced. Invalid duplicate/non-finite windows and undefined metrics now fail or are excluded explicitly.
+
+## Coverage and test consolidation
+
+| Functional area | Coverage checked | Before | After |
+|---|---|---:|---:|
+| M1 parser | Valid normalized payloads, players/events/rounds/ticks, latest match start, missing files, backend errors, empty data, Match with/without ticks | 7 | 14 |
+| M2 geometry and plots | ±180° wrapping, directions/distances, speed/acceleration/time, acquisition/response, tracking/corrections/overshoot/snaps, shot association, invalid inputs, real PNG export | 95 | 96 |
+| M3 datasets/adapters/scripts | Canonical IDs/labels, multi-match windows, finite data, exact numeric features, irregular tick time, duplicates/incomplete windows, normalization, splits without match leakage, statistics, stable CSV/resume rollback | 42 | 61 |
+| M4 anomalies | IF/LOF/OCSVM training/scoring, feature ordering/casting, finite values, score direction, reproducibility, identity aggregation, ECDF ties/calibration errors | 7 | 18 |
+| M5 supervised | Baselines/RF/HGB/tuned models, finite normalized probabilities, grouped CV/split reproducibility, thresholds, metrics, player means, positional scores, held-out LOF, persistence and feature order | 28 | 46 |
+| M6 analysis | Controlled end-to-end M1–M5 integration, all-player roster, exact means/ranking, rounds/events, plots/reports, model compatibility, partial/empty data, exact tree contributions and CLI | 0 | 39 |
+| **Total** | **No skipped tests** | **179** | **274** |
+
+M1–M5 gain **57 cases** and remove **one exact duplicate**, for **235 cases** after consolidation.
+`test_event_level_samples` is merged into `test_process_multiple_demos`, retaining all assertions.
+Three detector tests become one parameterized test covering the same three detectors; four training tests become one parameterized test covering the same four paths.
+M6 adds 39 cases in `test_analysis.py`. `test_build_dataset_script.py` is the only other new test file.
+The 91 existing M2 feature tests are retained; similar-looking cases cover different algorithms or boundaries.
+
+New tests first exposed the pandas infinity crash and canonical player-statistics omission; both were fixed and verified.
+One newly added RF persistence assertion initially used exact equality and failed at `1.11e-16`; tolerance `1e-12` now accounts for parallel floating-point tree summation.
+Two M6 expectations were updated after adding explicit partial-data counters. No historical successful test was weakened to hide a product regression.
+
+Automated tests remain small and synthetic. No suite test requires a demo download, external CS2CD data or costly full-dataset training.
+CS2CD anonymization still prevents guaranteeing real-player disjointness across different matches; match-level disjointness is tested.
+Historical full-dataset model experiments were not repeated.
+
+## Implementation and scientific interpretation
+
+Three package files implement M6: `analysis.py`, `cli.py`, `__main__.py`; `pyproject.toml` registers `cs2guard = cs2guard_demo.cli:main`.
+Matplotlib, already used and installed for M2, is declared as a runtime dependency because reports require it.
+Missing setuptools build support in the existing environment initially blocked a no-build-isolation install; the ordinary isolated build installs only the build requirements already declared by the project.
+No additional modeling, reporting or CLI dependency is introduced.
+
+The pipeline reuses DemoAdapter/DemoParser, DatasetBuilder, M2 geometry/plots, M4 `prepare_features`, M5 bundle loading and M5 player aggregation.
+It checks nonempty `.dem` input, adjacent metadata, feature names/order/dimensions, class mapping, probability output shape/range and optional recorded extraction settings.
+It never fits a model during analysis. Historical extraction settings are fixed at 32 ticks and 64 Hz, matching the training scripts; missing metadata settings are explicitly documented as a compatibility limitation.
+
+Every parser-roster player, telemetry/event actor and event victim is retained. Players without finite complete shot windows have null scores and an explanation.
+Players with windows are ordered by descending M5 mean, then canonical ID; unscored players follow without a rank.
+The full JSON retains every scored window and six measured features. Round association uses the shot tick; absent completed-round context remains null and crossing windows are flagged.
+Events in the same actor/weapon/round during the following two ticks provide nearby inspection context, not causal proof of a shot-to-hit relationship.
+
+The three highest-scoring windows per player are selected for inspection, even when all scores are low. This is a display limit, not a validated suspicion threshold.
+Round inspection priority is the maximum window score in each completed round, not a calibrated round probability.
+Speed and acceleration indicators are arithmetic means of window feature means, in degrees/s and degrees/s²; they are not combined with model outputs.
+Tracking measurements use M2 only when an observed victim has concurrent telemetry. Otherwise the plot explicitly references the shot aim direction.
+Reaction has no observed visibility stimulus and remains unavailable.
+Global RF feature importance and raw window values explain the available measurements.
+For the persisted M5 RF and native decision trees, local contributions also decompose the existing prediction:
+each split contributes the child-minus-parent class-1 probability to its feature. The root baseline plus these signed changes telescopes to the leaf probability.
+Changes and baselines are averaged across forest trees; player contributions are averaged across windows, exactly matching M5 score aggregation.
+Input conversion uses the same float32 precision as scikit-learn tree inference. Reconstruction is asserted to tolerance `1e-12`.
+This is an arithmetic explanation of the unchanged model, not a new detector or calibration. It depends on split order and is neither causal attribution nor SHAP.
+Unsupported estimator families explicitly retain null local contributions; their measured features and global importance remain separate.
+There is no new behavioral anomaly submodel, arbitrary weighted score, ECDF calibration on unlabeled players or cheating conclusion.
+
+`report.json` is machine-readable; `report.md` provides ranking, behavioral values, round priorities, review sequence bounds/events/features, image links and interpretation limits.
+CLI exit 0 means at least one player has a score; usable partial analyses are explicitly labelled `partial`.
+`complete` requires windows for every roster player, all eligible shots scored, and no missing/crossing round context. `partial` retains usable scores while exposing those gaps; `insufficient_data` means no player can be scored.
+Exit 2 means invalid input, missing/incompatible model, parsing/output failure or no scored window. No-data reports retain null scores rather than fabricated zeros.
+
+## Reproducible validation
+
+The [README Quick Start](../README.md#quick-start) covers Python 3.11+ installation and basic analysis. The detailed acceptance protocol is retained here; the README keeps the eleven M6 checklist items.
+
+Inference requires a trusted M5 `.joblib` bundle and adjacent `.json` metadata; model bytes and demos are ignored by Git and are not shipped in a fresh clone. Installation and automated tests require neither.
+If a bundle must be built separately, the historical command below trains M5 from the existing `demo_analyzer/data/processed/supervised_dataset.csv`; it is not part of inference:
+
+```powershell
+Set-Location demo_analyzer
+..\.venv\Scripts\python.exe scripts/save_supervised_model.py
+Set-Location ..
+```
+
+Commands executed from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --no-deps --disable-pip-version-check -e .
+.\.venv\Scripts\python.exe -m pytest -q --tb=short
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe -m compileall -q demo_analyzer/src demo_analyzer/scripts demo_analyzer/tests
+.\.venv\Scripts\python.exe -c "import cs2guard_demo.analysis, cs2guard_demo.cli, cs2guard_demo.parser, cs2guard_demo.dataset, cs2guard_demo.detection, cs2guard_demo.supervised, cs2guard_demo.visualization; print('Imports: OK')"
+.\.venv\Scripts\cs2guard.exe analyze --help
+.\.venv\Scripts\python.exe -m cs2guard_demo --help
+.\.venv\Scripts\cs2guard.exe analyze demo_analyzer/data/raw/train_sources/demo/test.dem --model demo_analyzer/models/supervised/random_forest_v1.joblib --output demo_analyzer/data/processed/m6_validation
+git diff --check
+```
+
+Final complete suite: **274 passed, 0 failed, 0 skipped**. `pip check`, syntax compilation, canonical imports and CLI help pass.
+All **75 Python files** parse; **26 non-namespace implementation modules** and **20 scripts** import successfully. No configured lint/type-check tool exists.
+Historical training scripts were imported and covered through library tests, not executed on the full dataset. They retain their expected `demo_analyzer/` working directory and data prerequisites.
+The multi-source builder's help and rollback/header paths are exercised, without overwriting research datasets.
+
+### Initial acceptance protocol
+
+These checks map to the eleven README criteria in their original order. The recorded initial results and later corrections remain in the sections below. Automated checks use a controlled parser, actual M1–M5 code, a small persisted classifier and real PNG output.
+
+For targeted checks, run from the repository root after installing the project with its `dev` extra:
+
+```powershell
+$python = '.\.venv\Scripts\python.exe'
+$analysis = 'demo_analyzer/tests/test_analysis.py'
+```
+
+| Criterion | Targeted automated command | Acceptance check |
+|---|---|---|
+| 1. Single command | `& $python -m pytest -q $analysis -k 'end_to_end or cli_analysis'` | Fixture scores, JSON/Markdown and PNGs agree; inference never fits a model. |
+| 2. Every player | `& $python -m pytest -q $analysis -k 'end_to_end or insufficient_data or single_player'` | All five fixture players remain present; unavailable scores are null with reasons. |
+| 3. Overall scores | `& $python -m pytest -q $analysis -k 'end_to_end or probability_uses or incompatible_model or invalid_model'` | Fixture window scores are 0/1 and player means 0.5/1; invalid inputs are rejected. |
+| 4. Behavioral indicators | `& $python -m pytest -q $analysis -k end_to_end` | Physical units, measurements and unavailable indicators are explicit. |
+| 5. Ranking | `& $python -m pytest -q $analysis -k ranking` | Ties and reordered input preserve ranking; unscored players follow scored players. |
+| 6. Round inspection | `& $python -m pytest -q $analysis -k 'end_to_end or single_player'` | Bounds, round IDs, null associations and boundary flags match the fixture. |
+| 7. Event inspection | `& $python -m pytest -q $analysis -k 'end_to_end or single_player'` | Shot IDs, bounds and nearby events agree; unrelated events are excluded; selection is capped at three per player. |
+| 8. Explanations | `& $python -m pytest -q $analysis -k 'end_to_end or contributions'` | Baseline plus signed contributions reconstructs window/player scores for RF and native trees; other model families remain unavailable. |
+| 9. Visualizations | `& $python -m pytest -q $analysis demo_analyzer/tests/test_aim_visualization.py -k 'end_to_end or export'` | Nonconstant PNGs have positive dimensions and an accurate victim/shot-direction reference. |
+| 10. Match report | `& $python -m pytest -q $analysis -k 'end_to_end or insufficient_data'` | Saved JSON equals returned data; Markdown image links resolve and missing data stays visible. |
+| 11. CLI | `& $python -m pytest -q $analysis -k cli` | Help and scoring succeed; invalid input, missing model and zero scored windows exit 2. |
+
+After the analysis command above, inspect the generated report without rerunning inference:
+
+```powershell
+$LASTEXITCODE # Check immediately after cs2guard analyze.
+$out = '.\demo_analyzer\data\processed\m6_validation'
+$report = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $out 'report.json') | ConvertFrom-Json
+$report.summary
+$report.players | Format-Table rank,player_id,player_name,score,window_count,status
+$report.players[0].behavioral_scores | ConvertTo-Json -Depth 5
+$report.rounds | Format-Table number,start_tick,end_tick,window_count,max_window_score
+$report.review_events | Select-Object player_id,round_number,shot_tick,start_tick,end_tick,score
+$report.review_events[0] | ConvertTo-Json -Depth 8
+$report.feature_importance
+$report.players[0].model_contributions
+$report.windows[0].model_contributions
+$report.limitations
+$report.review_events.visualization | Format-Table path,reference,sample_count
+Test-Path (Join-Path $out 'report.json')
+Test-Path (Join-Path $out 'report.md')
+Get-ChildItem -LiteralPath $out -Filter '*.png'
+Invoke-Item (Join-Path $out 'report.md')
+.\.venv\Scripts\cs2guard.exe analyze '.\missing.dem' --model '.\demo_analyzer\models\supervised\random_forest_v1.joblib' --output $out
+$LASTEXITCODE # Expected: 2 and an explicit "Analysis failed" message.
+```
+
+Compare these fields against the recorded local-demo results below: finite 0–1 player means, canonical IDs, descending ranks, explicit unavailable indicators, round-context counts, score reconstruction and report/PNG consistency. The initial run used shot-direction references only; later observed-victim plots belong to the robustness audit.
+
+### Real local demo
+
+The installed `cs2guard` command actually runs on `demo_analyzer/data/raw/train_sources/demo/test.dem` (312,377,735 bytes) with the unchanged M5 RF bundle.
+The analysis is repeated during implementation; displayed player means and ranking agree to six decimal places.
+The final report status is **partial** because some windows lack completed-round context or cross a boundary; all ten players nevertheless have scores.
+
+| Recorded item | Result |
+|---|---:|
+| Players / scored players | 10 / 10 |
+| Normalized telemetry rows | 1,624,992 |
+| Normalized events | 2,966 |
+| Scored 32-tick windows | 2,272 |
+| Completed rounds | 21 |
+| Unscored eligible shots | 0 |
+| Windows with no completed-round association | 42 |
+| Windows crossing a round boundary | 36 |
+| Saved PNG review plots | 30 |
+| Highest / lowest player mean | 0.263435 / 0.237090 |
+
+Every player's saved score is checked against the mean of its saved window scores to tolerance `1e-12`.
+Root baseline plus signed path contributions is also checked against all 2,272 RF window probabilities; maximum error is `4.44e-16`.
+The saved JSON contributions reconstruct all 2,282 window/player scores with maximum error `5.55e-16`.
+Ranking, canonical player IDs, 32-tick bounds, valid round bounds and actor/weapon/round event associations are checked against the generated JSON.
+All 30 PNGs exist, have positive dimensions and nonconstant pixels. A real plot is visually inspected; its trace, tick axis, degree units, shot marker and shot-direction reference are readable.
+All selected real sequences use the shot-direction fallback. Observed-victim tracking is verified in the controlled end-to-end fixture, but not demonstrated among these real selected candidates.
+The JSON and Markdown are retained locally under `demo_analyzer/data/processed/m6_validation/`, excluded from Git as generated outputs.
+The missing-demo CLI case is also executed and exits 2 with an explicit error.
+
+### Temporary directory correction
+
+The `.pytest_tmp*` folders originated from this task's explicit `--basetemp=demo_analyzer/.pytest_tmp*` commands and older manual test runs.
+`pytest.ini`, `pyproject.toml` and all repository scripts contain no such override. Fixtures use native `tmp_path`.
+All subsequent test commands omit `--basetemp` and use pytest's native temporary storage (`E:\Temp` on this host).
+The sandbox's remapped temporary directory is inaccessible for pytest cleanup; approved execution access solves that environment problem without changing fixtures or project features.
+After confirming task test sessions finished and checking actual Python/pytest process command lines, ten `.pytest_tmp*` directories are removed exclusively within the verified repository paths.
+No other data is deleted. `.gitignore` additionally protects `.pytest_tmp*/` against accidental tracking; this is a guard, not the fix.
+Complete native pytest execution is followed by a directory check: **zero `.pytest_tmp*` directories at repository root or under `demo_analyzer/`**.
+
+## Remaining validation limits
+
+The software pipeline is implemented and tested; M6 is **not declared entirely validated**.
+Calibrated behavioral probabilities and a validated operational threshold do not exist in M1–M5 and are not invented here.
+Local RF/tree path contributions reconstruct predictions, but do not establish causal importance or support non-tree estimator families.
+Ordinary-demo accuracy requires independent labels and validation of the CS2CD-to-demo domain shift. Model metadata omits extraction/version details, so structural compatibility does not establish scientific validity.
+Real target tracking and fully associated round context remain partially demonstrated as described above.
+No new full-dataset training, held-out model comparison or live server validation is claimed. No commit or push is performed.
+
+# M6 — Targeted robustness validation (2026-10-14)
+
+This follow-up validates the existing implementation, preserving all earlier local edits and the original `m6_validation/` outputs. Generated evidence lives under `demo_analyzer/data/processed/m6_robustness_20261014/`: `reference/`, three `before/` analyses, three `after/` analyses, a repeated `test.dem` analysis in `repeat/`, and independent checks in `audit/<demo stem>/`. Each audit includes `validation.json`, `raw_round_events.json`, and CSV/JSON inventories of every unassigned and crossing window. `corrections.diff` isolates this task's changes to three implementation files from the pre-existing implementation.
+
+## A. Diagnosis
+
+For `test.dem`, the exact `partial` condition is 42 windows without a completed-round association and 36 windows crossing a boundary. All ten players are scored; all 2,272 eligible shots generate complete finite windows. No eligible shot or generated feature row is omitted. Missing tracking and absent visibility stimuli do not determine this status.
+
+All 42 unassigned shots lie strictly after a `round_end` and before the next `round_start`. The gap is independently confirmed by the parsed `round_officially_ended` events, which coincide with the next start; duplicate official-end events are present in the raw parser output. Thirty-six windows contain the completed round's final ticks followed by post-result ticks; six windows lie entirely inside a transition. No window contains two different active rounds. The 36 crossing windows are a subset of the 42, not an additional set. Shots occur 3–434 ticks after the preceding end. No missing start/end event explains these 42 cases.
+
+The six entirely transitional windows are LuchoG at shot tick 27003; Syzel at 107079, 107085 and 130735; and squeezie at 26993 and 27011. The CSV inventory records every player's canonical and source IDs, name, window bounds, shot tick, reconstructed seconds (`tick / 64`, not wall-clock timestamps), preceding round/end, following round/start and score. Completed-round IDs are normalized sequentially after `begin_new_match`; raw event `round` values differ between start and end events and are not substituted into these IDs. The first retained interval begins at the latest `begin_new_match`, tick 5787, immediately after the first live start at 5786.
+
+The completed-interval contract is inclusive `[start_tick, end_tick]`. A post-result shot has no active completed-round association under this contract. Its preceding/following round context is recorded in the diagnostic inventory; `round_number` remains null rather than silently expanding the contract. All 42 scores remain in their player's arithmetic mean.
+
+Historical M3 windows contain 32 unique consecutive player ticks ending at the shot (31 tick intervals, 0.484375 seconds at the historical 64 Hz). They do not filter by round. The 36 end-crossing windows follow this definition and include post-result aim samples. Their largest angular step exactly across the end is 3.390503569 degrees; the largest position step is 3.359422697 game units. These measurements do not demonstrate spawn discontinuities or corrupt features. Changing this population would change the M5 input definition and require a separate compatibility/evaluation study; no such change or retraining is justified here.
+
+Two defects affect real outputs:
+
+* `weapon_fire` uses names such as `weapon_ak47`, while `player_hurt`/`player_death` use `ak47`. Exact comparison excluded every hit/kill from all scored windows, including all selected plots. Removing only the optional prefix during M6 comparison restores the observed contacts without changing the stored weapons or M3/M5 features.
+* Printing Unicode player names to redirected Windows `cp1252` stdout raises `UnicodeEncodeError` after reports are written. Both additional real demos originally exit 1 for this reason. Unencodable console characters now use backslash escapes; JSON/Markdown keep the full Unicode identities.
+
+Synthetic regressions also demonstrate a boundary flag missed when both window endpoints are unknown but a completed round lies inside; a missing subsequent `round_start` reuses a previous round start, creating overlapping intervals; and duplicate end events shift normalized round numbers. Boundary detection now checks actual interval boundaries. Parsing deduplicates end ticks and requires a subsequent start strictly after the preceding end. These parser edge cases do not change the three real demos' completed intervals.
+
+## B. Changes
+
+* `analysis.py`: optional weapon-prefix comparison, boundary detection, explicit reasons for unavailable tracking, and counted round limitations in JSON/Markdown. No score, feature, candidate-selection or window definition changes.
+* `cli.py`: safe encoding of console player names.
+* `parser/demo_parser.py`: two-line round-pairing correction described above.
+* `test_analysis.py` and `test_demo_parser.py`: 18 additional synthetic cases. Two existing tests gain assertions for reporting and extreme finite tree inputs.
+* README and this memory: record the new evidence while retaining the historical validation results.
+* `.gitignore`: exclude this validation's generated reports, images, logs and reference snapshots.
+
+Existing positional M5 aggregation, ranking with an ID tie break, class-column selection, feature ordering, finite-value rejection, tree float32 traversal and descriptive/scientific labels already work correctly.
+
+## C. Tests and environment
+
+Baseline: **274 passed in 22.07 s**. Six regression cases fail against the saved original implementation: Unicode stdout, both weapon-prefix directions, an interior boundary with unknown endpoints, a missing round start and a duplicate end. After correction, the final targeted M1/M2/M6 run passes **76 tests in 20.68 s**; the complete M1–M6 suite passes **292 tests in 22.59 s**, with no failures or skips. Targeted runs include all M6 end-to-end integration tests. New cases also cover inclusive event bounds, windows with no round context, and missing/single/duplicate victim telemetry. Existing tie, input-order, identity, positional aggregation, invalid-model and deterministic fixture tests remain intact.
+
+The first sandbox run yields 207 passed / 67 fixture errors because pytest cannot use the remapped temporary directory. Setting process-local `TEMP` and `TMP` to the native system directory `E:\Temp` resolves this without changing fixtures or pytest configuration. No `.pytest_tmp*` directory is created. The Python launcher also prints `Failed to find real location of E:\Python\python.exe` on stderr in this execution environment, including successful commands; the three corrected CLI exits are nevertheless 0. No parser exception is recovered or hidden.
+
+All 36 importable package modules import successfully. Syntax compilation, `pip check`, installed/module CLI help, invalid-demo CLI exit 2 and `git diff --check` pass. No configured lint/type-check command exists. No dependency installation, model training, download, commit or push occurs.
+
+## D. Real analyses
+
+All three locally available `.dem` files are analyzed before and after correction. None is downloaded or modified.
+
+| Demo | Scored / detected players | Generated / scored windows | Completed rounds | No round | Crossing | Player scores min / mean / max | Selected / PNG | Tracking plots | CLI after | Seconds before / after |
+|---|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|
+| `test.dem` | 10 / 10 | 2272 / 2272 | 21 | 42 | 36 | 0.237090 / 0.251237 / 0.263435 | 30 / 30 | 4 | 0 | 143.85 / 37.75 |
+| `2026-09-01_19-31-10_17_de_inferno_team_Kay_vs_team_YY.dem` | 10 / 11 | 3104 / 3104 | 23 | 129 | 42 | 0.235112 / 0.250149 / 0.259392 | 30 / 30 | 7 | 0 | 52.10 / 50.56 |
+| `2026-09-02_19-03-20_18_de_ancient_team_alxska-_vs_team_Palmoleeve.dem` | 10 / 10 | 2800 / 2800 | 24 | 106 | 58 | 0.240015 / 0.249423 / 0.261043 | 30 / 30 | 9 | 0 | 60.58 / 40.06 |
+
+Every status remains `partial`; both JSON and Markdown are present and consistent. All normalized eligible shots have scored windows; no score is NaN or infinite. Inferno retains Steam ID `76561198125674008` with telemetry but zero eligible shots and a null score. Inferno's unassigned windows consist of 38 between completed rounds, four after the last completed end but before the next start, and 87 in a final round starting at tick 188682 with no end event. Ancient's 106 unassigned windows are between completed intervals. Every real crossing is an end boundary; no real window crosses the next round's start. Timings include different concurrent validation work and are not a performance benchmark.
+
+## E. Independent before/after checks
+
+All 8,176 windows are rebuilt from normalized raw telemetry and events. Their six feature values match the saved reports exactly. The persisted RF predicts these raw inputs again: maximum difference from reported window scores is `2.78e-16`; independently calculated player means differ by at most `2.78e-17`. Baseline plus feature-path contributions reconstructs every window/player score within `6.11e-16`. No unexpected before/after difference exceeds `1e-12`: identities, window bounds, completed intervals, scores, rank, candidate IDs and contributions are conserved.
+
+For `test.dem`, linkage changes from 2,272 shots only to 2,272 shots plus 320 hit and 148 kill associations. Across all windows, 347 have a linked observed victim with enough concurrent telemetry; four occur in the top-three-per-player selection. The other 1,925 windows, including 26 selected sequences, have no contact satisfying the existing attacker/weapon/round/two-tick conditions. Inferno has 515 available tracking windows (seven selected); Ancient has 507 (nine selected). No real linked target lacks sufficient concurrent telemetry, and no later available victim is excluded by the first-contact choice in these runs. Synthetic missing/duplicate victim cases retain an explicit shot-direction fallback.
+
+The data passed to M2 are checked for every one of the 90 final plots: actor, target, sample ticks, bounds, title and angular geometry. Independent float64 geometry differs by at most `1.12e-6` degrees from the current mixed float32/float64 calculation; no M2 formula is changed. All plots are 1100×600 RGBA with nonconstant data, correct image links and finite values. Four representative plots are visually inspected across the three demos, including observed-victim and shot-direction references. Only the expected 4/7/9 tracking PNGs differ from baseline. Reaction remains unavailable without observed visibility stimuli. Tracking uses body-position geometry, without visibility, eye-height or hitbox reconstruction; a hit just after the shot can legitimately fall outside the pre-shot plot.
+
+| `test.dem` player, unchanged rank | Windows | Mean before / after (six decimals) | No round / crossing | Additive contribution of unassigned / crossing windows to player mean |
+|---|---:|---|---|---|
+| 1 MDMiro | 159 | 0.263435 / 0.263435 | 2 / 2 | 0.002642 / 0.002642 |
+| 2 KeaZy | 120 | 0.260880 / 0.260880 | 2 / 2 | 0.004495 / 0.004495 |
+| 3 LuchoG | 188 | 0.258100 / 0.258100 | 9 / 8 | 0.013038 / 0.011063 |
+| 4 YEL7OWORE | 375 | 0.256915 / 0.256915 | 2 / 2 | 0.001172 / 0.001172 |
+| 5 samu777- | 258 | 0.256882 / 0.256882 | 6 / 6 | 0.005533 / 0.005533 |
+| 6 NthraX | 250 | 0.252927 / 0.252927 | 11 / 11 | 0.012024 / 0.012024 |
+| 7 -s4ndor | 286 | 0.244495 / 0.244495 | 0 / 0 | 0 / 0 |
+| 8 squeezie | 225 | 0.244215 / 0.244215 | 4 / 2 | 0.004866 / 0.002441 |
+| 9 Syzel | 139 | 0.237428 / 0.237428 | 6 / 3 | 0.009635 / 0.004724 |
+| 10 Draw0x | 272 | 0.237090 / 0.237090 | 0 / 0 | 0 / 0 |
+
+An additive contribution is the sum of the subset's scores divided by the player's total window count, not the subset mean. The overlapping subsets must not be added together.
+
+The repeated installed-CLI run of `test.dem` finishes in 33.63 s. Deep comparison of every report field finds no semantic difference at absolute tolerance `1e-12`; all 30 PNGs are byte-identical. JSON is not byte-identical: parallel RF floating-point summation (`n_jobs=-1`) changes window scores by at most `2.22e-16`. No report field is omitted from this repeat comparison, and ranking remains unchanged. Exact binary reproducibility of floating scores is not claimed.
+
+SHA-256 manifests before and after match for all three source demos, model metadata and model bytes. The RF model hash remains `322ea64dddf12164824a5269371429ae87f714f7a2c0bf89c2eb10185cc09d11`.
+
+## F. Manual reproduction
+
+From the repository root, use the existing environment and native system temporary directory:
+
+```powershell
+$env:TEMP = 'E:\Temp'
+$env:TMP = 'E:\Temp'
+.\.venv\Scripts\python.exe -m pytest -q demo_analyzer/tests/test_analysis.py demo_analyzer/tests/test_demo_parser.py demo_analyzer/tests/test_aim_visualization.py
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\cs2guard.exe analyze --help
+.\.venv\Scripts\python.exe -m cs2guard_demo --help
+
+$model = '.\demo_analyzer\models\supervised\random_forest_v1.joblib'
+$modelHashBefore = (Get-FileHash -LiteralPath $model -Algorithm SHA256).Hash
+$runRoot = Join-Path '.\demo_analyzer\data\processed' ('m6_manual_' + [guid]::NewGuid().ToString('N'))
+Get-ChildItem '.\demo_analyzer\data\raw\train_sources\demo' -Filter '*.dem' | ForEach-Object {
+    $out = Join-Path $runRoot $_.BaseName
+    .\.venv\Scripts\cs2guard.exe analyze $_.FullName --model $model --output $out
+    if ($LASTEXITCODE -ne 0) { throw "Analysis failed: $($_.Name)" }
+    $report = Get-Content -LiteralPath (Join-Path $out 'report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $report.summary
+    $report.players | Format-Table rank,player_id,score,window_count
+    $report.review_events.visualization | Format-Table path,reference,sample_count
+    if (-not (Test-Path -LiteralPath (Join-Path $out 'report.md'))) { throw 'Missing Markdown report' }
+}
+if ((Get-FileHash -LiteralPath $model -Algorithm SHA256).Hash -ne $modelHashBefore) { throw 'Model changed' }
+git diff --check
+git status --short
+Get-ChildItem -Force -Directory -Path '.', '.\demo_analyzer' -Filter '.pytest_tmp*'
+```
+
+Expected: 76 targeted / 292 total tests; CLI exit 0 for every local demo; counts and scores in the table above; unchanged model hash; no `.pytest_tmp*` directories. Inspect the generated Markdown, PNGs and the exact per-window CSV evidence referenced above. To repeat a demo, call the same installed CLI into another unique directory and compare JSON recursively with numeric absolute tolerance `1e-12`; all other fields must match.
+
+## G. Validation status and limits
+
+* Technical M6 validity: validated for the existing inference contract and tested errors.
+* Data and association integrity: partial. Known transitions and an unfinished round remain explicitly outside completed-round coverage. Nearby contacts are temporal context, not causal shot attribution.
+* Multiple-demo robustness: validated on all three available local demos, not on arbitrary recording formats or populations.
+* Scientific score validity on ordinary demos: not validated. Independent labels, domain-shift evaluation, appropriate calibration data and extraction-version metadata remain absent. No new operational threshold, probability of cheating, verdict or retraining is introduced. Removing `weapon_` does not infer undocumented aliases such as silenced-weapon differences in hurt events.
+
+# M6 — Presumed-legitimate external evaluation
+
+`cs2guard_demo.validation` evaluates local demos under
+`demo_analyzer/data/raw/held_out/legitimate/` with the existing frozen RF bundle.
+It calls M6 directly, retaining scores, features, player identities, quality counts
+and RF path contributions. The optional `review_plots=False` argument suppresses
+per-player aim PNGs for this study; ordinary M6 calls retain their existing plots.
+No feature, window, scoring, training or calibration contract changes.
+
+The protocol is saved **before** external inference: model/metadata SHA-256,
+exact source hashes and a source ZIP, Git state, Python/dependency versions,
+32-tick/64-Hz settings, ordered features, arithmetic-mean aggregation, labels,
+bootstrap settings and the historical descriptive threshold grid **0.10–0.90**.
+The comparator is `>=`, as in M5; **0.50 is not an operational threshold**.
+Outputs live under ignored `demo_analyzer/data/processed/validation_legitimate/`, with separate
+content-addressed match attempts and study directories. Repeating the command
+reuses reports only after receipt/hash, identities, finite values, counts and
+player-mean checks. Invalid attempts and previous studies remain available.
+
+Labels default to `presumed_legitimate`, based solely on the user's declaration.
+Optional `--manifest` JSON maps relative demo paths to provenance and player
+overrides. Unknown players remain in descriptive outputs and are excluded from
+flag denominators. A confirmed label requires an individual override with evidence:
+
+```json
+{
+  "match.dem": {
+    "status": "presumed_legitimate",
+    "evidence": "User-supplied recording; no independent adjudication",
+    "players": {
+      "demo:76561198000000000": {"status": "unknown"},
+      "demo:76561198000000001": {
+        "status": "confirmed_legitimate",
+        "evidence": "Describe the individual verification here"
+      }
+    }
+  }
+}
+```
+
+The principal unit is the **player-match**. Descriptive summaries retain missing
+values, sample standard deviations and exploratory tail percentiles. Fixed-seed
+95% percentile bootstrap intervals resample matches, preserving within-match
+dependence; a second analysis resamples connected matches sharing persistent IDs.
+With fewer than two independent components, that interval is unavailable.
+Wilson intervals are explicitly IID sensitivity references, not corrected bounds.
+Zero/all flag bootstrap intervals are degenerate and cannot establish a population
+FPR. The metric is `presumed_legitimate_flag_rate`, not a confirmed FPR.
+
+Existing `supervised_dataset.csv` supplies legitimate CS2CD feature distributions,
+including a separately reported full reference and the exact historical M5 test
+split. The persisted model scores that test reference without fitting. Window
+features/scores and equal-weight player-match means are reported separately.
+No historical dataset is regenerated or downloaded if the input is absent.
+Exact native-demo duplicates are excluded; filename/identity overlaps with the
+three historical M6 reports are recorded. CS2CD anonymization and unavailable
+independent session identifiers still prevent complete independence guarantees.
+
+From the repository root, run or resume the entire study with the same command:
+
+```powershell
+.\.venv\Scripts\python.exe -m cs2guard_demo.validation
+```
+
+Read the most recent study and open its report/figures:
+
+```powershell
+$study = (Get-Content '.\demo_analyzer\data\processed\validation_legitimate\latest.json' -Raw -Encoding utf8 | ConvertFrom-Json).run_directory
+$statistics = Get-Content (Join-Path $study 'statistics.json') -Raw -Encoding utf8 | ConvertFrom-Json
+$statistics.counts
+$statistics.eligible_player_match_scores
+$statistics.flag_rates | Select-Object threshold,evaluable_player_matches,flagged_player_matches,presumed_legitimate_flag_rate
+Invoke-Item (Join-Path $study 'report.md')
+Get-ChildItem -LiteralPath $study -Filter '*.png' | Invoke-Item
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Scientific conclusions require the recorded real-study results below. This
+negative-only study cannot measure external recall, ROC-AUC or PR-AUC, validate
+calibration, identify cheaters or demonstrate generalization.
+
+## Real external study — 2026-10-14
+
+All **nine** available new demos were analyzed: **90 scored/detected player-match
+observations**, **57 observable Steam identities**, **29,010 scored windows**, no
+failed/excluded demos and no unscored players. All 90 labels are presumed legitimate
+from the user's declaration; none is independently confirmed or marked unknown.
+All reports are `partial`: **685 windows lack completed-round context** and
+**415 cross a round boundary**, retained under the historical extraction contract.
+Scored players have 114–858 windows (median 304.5).
+
+Player-match score mean is **0.249250**, median **0.244984**, sample SD **0.014424**,
+minimum/maximum **0.225987/0.295459**, Q25/Q75 **0.238631/0.255644** and
+P90/P95/P99 **0.267843/0.279872/0.289260**. Tail percentiles remain exploratory
+with 90 observations. Match means range **0.242817–0.256175**. Ten identities recur
+in multiple matches; their observed within-player score ranges are
+**0.001584–0.041159**, descriptive evidence only.
+
+The mean-score 95% match-bootstrap interval is **[0.246899, 0.251793]**, conditional
+on treating nine matches as independent. **All nine matches form one connected
+component through repeated players**, including one identity present in every
+match. The dependence-preserving connected bootstrap therefore has **no estimable
+interval**. The narrow match-bootstrap interval must not be interpreted as reliable
+population precision.
+
+At fixed thresholds **0.10 and 0.20**, flags are **90/90 player-matches and 9/9
+matches**. At **0.30–0.90, including 0.50**, flags are **0/90 and 0/9**. No label or
+data exclusions enter these denominators. Zero/all flag bootstrap intervals are
+degenerate. At zero flags, IID Wilson sensitivity references are **[0, 4.09%]** for
+90 observations and **[0, 29.91%]** for nine matches; neither adjusts for the actual
+shared-player dependence. Zero observed flags establishes neither zero FPR nor
+cheater sensitivity.
+
+No exact duplicate occurs among the nine files or against the three historical M6
+demos. **Six Steam identities overlap the historical technical reports**. These
+recordings are new matches, not a wholly new player cohort; filename/session and
+CS2CD anonymization uncertainties remain. M3 discovery is restricted to
+`train_sources`; this evaluation writes elsewhere and never invokes training.
+The existing M5 input contains **397,487 CS2CD windows only** and no observable
+external match/player-ID overlap; anonymization still limits real-person checks.
+
+CS2CD comparison uses **282,022 legitimate windows / 1,801 player-matches** for
+the full descriptive feature reference, and **66,588 legitimate windows / 402
+player-matches over 64 historical test matches** for frozen-RF score comparisons.
+Window feature median shifts are small relative to reference IQR
+(approximately **−0.099 to +0.010 IQR**); equal-weight player-match feature means
+give **−0.060 to +0.040 IQR**. External player scores are lower and less dispersed:
+mean/median **0.249250/0.244984**, versus **0.284594/0.274929** for legitimate CS2CD
+test observations. Similar medians do not imply identical tails: window P99 maximum
+speed is **829.28 versus 692.76 degrees/s**, and P99 speed SD is **231.30 versus
+191.97 degrees/s**. These are descriptive distribution differences, not significance
+tests, operational improvements or evidence of detection degradation.
+
+The highest player score is **0.295459**, from 525 windows with **98.86%** completed
+round coverage (six unassigned and five crossing windows). Five highest observations
+retain feature extrema and signed RF path contributions in the report; none is
+identified as cheating. Four aggregate PNG figures were visually inspected.
+
+Automated baseline: **292 passed** after correcting inaccessible sandbox temporary
+storage with process-local `TEMP`/`TMP`. Complete suite after adding the external
+evaluation tests: **330 passed** (38 new cases); syntax compilation and `pip check`
+passed. Tests cover empty/invalid inputs, duplicates, manifests, missing/nonfinite
+values, rates/ties, clustered resampling, reference comparisons, preserved reports,
+resume, failure isolation and frozen-model integrity. Artifacts include JSON/CSV
+statistics, a Markdown report, four figures, frozen source/protocol evidence and
+per-demo M6 reports. Model and metadata remain unchanged; no commit or push.
+Real resume reused all nine verified match reports and reproduced statistics
+exactly. Independent model reload/inference on all 29,010 saved feature rows gave
+a maximum score difference of **2.776e-16**; maximum RF contribution reconstruction
+error was **6.661e-16**, both below **1e-12**. This check does not independently
+repeat source parsing. Final evidence is in
+`demo_analyzer/data/processed/validation_legitimate/run-0ae2814792ffd726/verification.json`;
+`latest.json` points to the study report and figures.
+
+**Evidence classification:** technical processing completed; validation labels
+remain presumed; score concentration is observed on this sample; threshold flags
+are measured descriptively; distribution differences are observable; external
+cheater detection, calibration and generalization remain **unvalidated**.
+
 # Future Milestones
 
-Future sections will document the next Demo Analyzer milestones as they are implemented.
-
-The current milestone is **M6 — Demo Analyzer**.
-
-The objective is to preserve not only **what CS2Guard does**, but also the reasoning and technical decisions that led to the final implementation.
+M7–M10 remain future work. M6 validation limitations above remain visible rather than being converted into unsupported scientific claims.

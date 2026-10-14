@@ -3,21 +3,11 @@ from pathlib import Path
 import pandas as pd
 
 from cs2guard_demo.supervised import evaluate_model, prepare_supervised_data, split_labeled_dataset, train_tuned_models
+from cs2guard_demo.supervised.evaluation import print_metrics
 
 INPUT = Path("data/processed/supervised_dataset.csv")
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
-
-
-def print_metrics(name: str, metrics: dict[str, float | int]) -> None:
-    print(name)
-    print(f"  Precision: {metrics['precision']:.4f}")
-    print(f"  Recall:    {metrics['recall']:.4f}")
-    print(f"  F1-score:  {metrics['f1']:.4f}")
-    print(f"  ROC-AUC:   {metrics['roc_auc']:.4f}")
-    print(f"  PR-AUC:    {metrics['pr_auc']:.4f}")
-    print(f"  FPR:       {metrics['false_positive_rate']:.4f}")
-    print(f"  TN={metrics['tn']} FP={metrics['fp']} FN={metrics['fn']} TP={metrics['tp']}")
 
 
 def main() -> None:

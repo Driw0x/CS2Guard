@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+import pytest
 from cs2guard_demo.dataset import validate_event_schema, validate_tick_schema
 from cs2guard_demo.dataset.adapters import CS2CDAdapter
 
@@ -59,6 +60,29 @@ def test_cs2cd_ticks_follow_canonical_schema(tmp_path, monkeypatch):
     assert player_3['label'] == 'suspicious'
     assert player_3['identity_scope'] == 'match'
     assert player_3['player_id'] == f'cs2cd:{adapter.match_id}:Player_3'
+
+
+def test_cs2cd_invalid_ticks_are_dropped(tmp_path, monkeypatch):
+    json_path, parquet_path = create_cs2cd_files(tmp_path)
+    ticks = pd.DataFrame({'tick': [100, 101, 102], 'steamid': ['Player_1'] * 3,
+                          'X': [1.0, float('inf'), 1.0], 'Y': [0.0] * 3, 'Z': [0.0] * 3,
+                          'yaw': [0.0, 0.0, float('nan')], 'pitch': [0.0] * 3})
+    monkeypatch.setattr(pd, 'read_parquet', lambda _: ticks)
+    adapter = CS2CDAdapter(json_path, parquet_path)
+    result = adapter.get_ticks()
+    assert result['tick'].tolist() == [100]
+    assert result['player_id'].tolist() == [f'cs2cd:{adapter.match_id}:Player_1']
+
+
+def test_cs2cd_missing_files_and_tick_columns_are_rejected(tmp_path, monkeypatch):
+    with pytest.raises(FileNotFoundError, match='CS2CD JSON file not found'):
+        CS2CDAdapter(tmp_path / 'missing.json', tmp_path / 'missing.parquet')
+    json_path, parquet_path = create_cs2cd_files(tmp_path)
+    with pytest.raises(FileNotFoundError, match='CS2CD Parquet file not found'):
+        CS2CDAdapter(json_path, tmp_path / 'missing.parquet')
+    monkeypatch.setattr(pd, 'read_parquet', lambda _: pd.DataFrame({'tick': [100]}))
+    with pytest.raises(ValueError, match='Missing CS2CD tick columns'):
+        CS2CDAdapter(json_path, parquet_path).get_ticks()
 
 
 def test_same_anonymous_player_is_unique_between_matches(tmp_path):
