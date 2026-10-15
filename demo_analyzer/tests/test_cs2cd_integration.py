@@ -6,7 +6,7 @@ from cs2guard_demo.dataset import DatasetBuilder, validate_event_schema, validat
 from cs2guard_demo.dataset.adapters import CS2CDAdapter
 
 
-def test_cs2cd_to_aim_features_integration(tmp_path, monkeypatch):
+def test_cs2cd_to_aim_features_integration(tmp_path):
     json_path = tmp_path / "match.json"
     parquet_path = tmp_path / "match.parquet"
 
@@ -27,7 +27,6 @@ def test_cs2cd_to_aim_features_integration(tmp_path, monkeypatch):
     }
 
     json_path.write_text(json.dumps(data), encoding="utf-8")
-    parquet_path.touch()
 
     tick_rows = []
 
@@ -59,8 +58,7 @@ def test_cs2cd_to_aim_features_integration(tmp_path, monkeypatch):
             }
         )
 
-    fake_ticks = pd.DataFrame(tick_rows)
-    monkeypatch.setattr(pd, "read_parquet", lambda _: fake_ticks)
+    pd.DataFrame(tick_rows).to_parquet(parquet_path, index=False)
 
     adapter = CS2CDAdapter(json_path, parquet_path)
     events = adapter.get_events()

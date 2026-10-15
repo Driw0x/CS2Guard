@@ -227,8 +227,6 @@ On historical CS2CD held-out matches, Random Forest achieves player-match **ROC-
 
 ## M6 — Demo Analyzer
 
-Turn the machine learning pipeline into a usable offline match-analysis tool.
-
 * [x] Analyze an entire demo from a single command
 * [x] Analyze every player in the match, retaining insufficient-data players without a score
 * [x] Generate an overall suspicion score per player using the M5 window-score mean
@@ -245,13 +243,13 @@ Turn the machine learning pipeline into a usable offline match-analysis tool.
 
 Use the command in [Quick Start](#quick-start) with a trained M5 bundle. Reports include player rankings, review sequences, JSON/Markdown and aim plots.
 
-**Validation:** M6 is technically complete, with **330 automated tests passing at the latest recorded audit**. Evaluation covers three technical demo recordings and nine presumed-legitimate external demos.
+**Validation:** M6 produces reports for three technical demo recordings and nine presumed-legitimate external demos. Frozen-RF inference on the **64 historical CS2CD test matches** reproduces M5 player-match **ROC-AUC 0.7779 / Average Precision 0.6840**, with **Hit@1 44/64** and **Hit@3 59/64**. These matches were already evaluated during M5; this is a reproduction, not independent validation.
 
-Scores are uncalibrated model outputs; detection accuracy on independently confirmed cheaters remains unvalidated.
+An additional **478 CS2CD matches with only negative annotations** yield **4,726 scored player-matches from 477 matches**. At the descriptive threshold 0.50, **61/4,726 are flagged (descriptive flag rate 1.29%; 95% match-bootstrap interval 0.91–1.71%)** under those annotations. This cohort cannot measure discrimination or recall; its absence from inspected development artifacts does not prove it was never viewed.
 
-See [Demo Analyzer Project Memory](docs/demo_analyzer_memory.md#m6--demo-analyzer) for detailed tests, experiments and scientific limitations.
+Scores are uncalibrated model outputs. The 0.50 threshold has no operational validation; the annotated flag rate does not estimate a production FPR. CS2CD JSON/Parquet evaluation does not validate native-demo parsing or detection of independently confirmed new cheaters.
 
-M7–M10 below are planned; their milestone results describe intended capabilities.
+See [CS2CD results and protocol](docs/demo_analyzer_memory.md#m6--cs2cd-evaluation-2026-10-15) and [Demo Analyzer implementation](docs/demo_analyzer_memory.md#m6--demo-analyzer) for detailed evidence and limitations.
 
 ---
 

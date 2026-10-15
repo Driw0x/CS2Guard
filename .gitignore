@@ -61,6 +61,7 @@ coverage.xml
 demo_analyzer/data/processed/m6_validation/
 demo_analyzer/data/processed/m6_robustness_20261014/
 demo_analyzer/data/processed/validation_legitimate/
+demo_analyzer/data/processed/validation_cs2cd_20261015/
 cover/
 
 # Translations

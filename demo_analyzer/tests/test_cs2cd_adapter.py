@@ -46,10 +46,10 @@ def test_cs2cd_events_follow_canonical_schema(tmp_path):
     assert (suspicious_events['label'] == 'suspicious').all()
 
 
-def test_cs2cd_ticks_follow_canonical_schema(tmp_path, monkeypatch):
+def test_cs2cd_ticks_follow_canonical_schema(tmp_path):
     json_path, parquet_path = create_cs2cd_files(tmp_path)
     fake_ticks = pd.DataFrame({'tick': [100, 100], 'steamid': ['Player_1', 'Player_3'], 'X': [1.0, 2.0], 'Y': [3.0, 4.0], 'Z': [5.0, 6.0], 'yaw': [10.0, 20.0], 'pitch': [1.0, 2.0], 'team_name': ['CT', 'TERRORIST'], 'active_weapon_name': ['M4A1', 'AK-47']})
-    monkeypatch.setattr(pd, 'read_parquet', lambda _: fake_ticks)
+    fake_ticks.to_parquet(parquet_path, index=False)
     adapter = CS2CDAdapter(json_path, parquet_path)
     ticks = adapter.get_ticks()
     validate_tick_schema(ticks)
@@ -62,27 +62,78 @@ def test_cs2cd_ticks_follow_canonical_schema(tmp_path, monkeypatch):
     assert player_3['player_id'] == f'cs2cd:{adapter.match_id}:Player_3'
 
 
-def test_cs2cd_invalid_ticks_are_dropped(tmp_path, monkeypatch):
+def test_cs2cd_invalid_ticks_are_dropped(tmp_path):
     json_path, parquet_path = create_cs2cd_files(tmp_path)
     ticks = pd.DataFrame({'tick': [100, 101, 102], 'steamid': ['Player_1'] * 3,
                           'X': [1.0, float('inf'), 1.0], 'Y': [0.0] * 3, 'Z': [0.0] * 3,
                           'yaw': [0.0, 0.0, float('nan')], 'pitch': [0.0] * 3})
-    monkeypatch.setattr(pd, 'read_parquet', lambda _: ticks)
+    ticks.to_parquet(parquet_path, index=False)
     adapter = CS2CDAdapter(json_path, parquet_path)
     result = adapter.get_ticks()
     assert result['tick'].tolist() == [100]
     assert result['player_id'].tolist() == [f'cs2cd:{adapter.match_id}:Player_1']
 
 
-def test_cs2cd_missing_files_and_tick_columns_are_rejected(tmp_path, monkeypatch):
+def test_cs2cd_missing_files_and_tick_columns_are_rejected(tmp_path):
     with pytest.raises(FileNotFoundError, match='CS2CD JSON file not found'):
         CS2CDAdapter(tmp_path / 'missing.json', tmp_path / 'missing.parquet')
     json_path, parquet_path = create_cs2cd_files(tmp_path)
     with pytest.raises(FileNotFoundError, match='CS2CD Parquet file not found'):
         CS2CDAdapter(json_path, tmp_path / 'missing.parquet')
-    monkeypatch.setattr(pd, 'read_parquet', lambda _: pd.DataFrame({'tick': [100]}))
+    pd.DataFrame({'tick': [100]}).to_parquet(parquet_path, index=False)
     with pytest.raises(ValueError, match='Missing CS2CD tick columns'):
         CS2CDAdapter(json_path, parquet_path).get_ticks()
+
+
+@pytest.mark.parametrize('include_optional', [False, True])
+def test_cs2cd_projects_columns_without_changing_ticks(tmp_path, monkeypatch, include_optional):
+    json_path, parquet_path = create_cs2cd_files(tmp_path)
+    data = pd.DataFrame({
+        'unused': ['ignored'] * 6,
+        'tick': pd.Series([100, 101, 102, 103, 104, 105], dtype='int32'),
+        'steamid': ['Player_1', 'Player_3', 'Player_1', 'Player_1', None, 'Player_3'],
+        'X': pd.Series([1.0, 2.0, float('inf'), 1.0, 1.0, 1.0], dtype='float32'),
+        'Y': [3.0, 4.0, 0.0, 0.0, 0.0, 0.0],
+        'Z': [5.0, 6.0, 0.0, 0.0, 0.0, 0.0],
+        'yaw': [10.0, 20.0, 0.0, float('nan'), 0.0, 0.0],
+        'pitch': [1.0, 2.0, 0.0, 0.0, 0.0, float('-inf')],
+    })
+    expected_optional = {
+        'team_name': ['CT', 'TERRORIST'], 'weapon': ['M4A1', 'AK-47'],
+        'health': [100.0, float('nan')], 'armor_value': [90, 80],
+        'is_alive': [True, True], 'is_airborne': [False, True],
+        'velocity_X': [1.0, 2.0], 'velocity_Y': [3.0, 4.0], 'velocity_Z': [5.0, 6.0],
+    }
+    selected_columns = ['tick', 'steamid', 'X', 'Y', 'Z', 'yaw', 'pitch']
+    if include_optional:
+        for name, values in expected_optional.items():
+            column = 'active_weapon_name' if name == 'weapon' else name
+            data[column] = values + values + values
+            selected_columns.append(column)
+        data.loc[1, 'health'] = float('-inf')
+    data.index = range(20, 26)
+    data.to_parquet(parquet_path)
+    read_parquet = pd.read_parquet
+    calls = []
+
+    def projected_read(path, *, columns):
+        calls.append(columns)
+        return read_parquet(path, columns=columns)
+
+    monkeypatch.setattr(pd, 'read_parquet', projected_read)
+    adapter = CS2CDAdapter(json_path, parquet_path)
+    result = adapter.get_ticks()
+    expected = pd.DataFrame({
+        'source': ['cs2cd'] * 2, 'match_id': [adapter.match_id] * 2,
+        'player_id': [f'cs2cd:{adapter.match_id}:Player_1', f'cs2cd:{adapter.match_id}:Player_3'],
+        'source_player_id': ['Player_1', 'Player_3'], 'identity_scope': ['match'] * 2,
+        'label': ['legitimate', 'suspicious'], 'tick': pd.Series([100, 101], dtype='int32'),
+        'x': pd.Series([1.0, 2.0], dtype='float32'), 'y': [3.0, 4.0], 'z': [5.0, 6.0],
+        'yaw': [10.0, 20.0], 'pitch': [1.0, 2.0],
+        **(expected_optional if include_optional else {}),
+    })
+    assert calls == [selected_columns]
+    pd.testing.assert_frame_equal(result, expected, check_exact=True)
 
 
 def test_same_anonymous_player_is_unique_between_matches(tmp_path):

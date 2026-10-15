@@ -75,8 +75,10 @@ class CS2CDAdapter:
         return players
 
     def get_ticks(self) -> pd.DataFrame:
-        ticks = pd.read_parquet(self.parquet_path)
-        missing_columns = REQUIRED_TICK_COLUMNS - set(ticks.columns)
+        import pyarrow.parquet as parquet
+
+        columns = parquet.ParquetFile(self.parquet_path).schema_arrow.names
+        missing_columns = REQUIRED_TICK_COLUMNS - set(columns)
 
         if missing_columns:
             raise ValueError(f'Missing CS2CD tick columns: {sorted(missing_columns)}')
@@ -85,9 +87,10 @@ class CS2CDAdapter:
         selected_columns = ['tick', 'steamid', 'X', 'Y', 'Z', 'yaw', 'pitch']
 
         for column in optional_columns:
-            if column in ticks.columns:
+            if column in columns:
                 selected_columns.append(column)
 
+        ticks = pd.read_parquet(self.parquet_path, columns=selected_columns)
         ticks = ticks[selected_columns].copy()
         ticks = ticks.replace([float('inf'), float('-inf')], float('nan'))
         ticks = ticks.dropna(subset=['tick', 'steamid', 'X', 'Y', 'Z', 'yaw', 'pitch'])

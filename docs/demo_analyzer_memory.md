@@ -1566,13 +1566,13 @@ to:
 
 > "Can labeled behavioral data improve suspicious-player ranking, and can the resulting model be evaluated and persisted without introducing avoidable data leakage?"
 
-M5 provides the supervised detection model required for the usable offline Demo Analyzer planned in M6.
+M5 provides the supervised model used by the offline Demo Analyzer in M6.
 
 ---
 
 # M6 — Demo Analyzer
 
-## Scope and reference state
+## Initial audit scope and reference state — 2026-10-14
 
 The audit and implementation on 2026-10-14 preserve the README roadmap: M6 is offline demo analysis. Server-side streaming remains M9/M10; `server_side/` is unchanged.
 The initial branch was `main`, with no tracked local changes. The project uses a setuptools `src` layout and canonical `cs2guard_demo` imports.
@@ -1651,11 +1651,11 @@ Two M6 expectations were updated after adding explicit partial-data counters. No
 
 Automated tests remain small and synthetic. No suite test requires a demo download, external CS2CD data or costly full-dataset training.
 CS2CD anonymization still prevents guaranteeing real-player disjointness across different matches; match-level disjointness is tested.
-Historical full-dataset model experiments were not repeated.
+This initial audit did not repeat historical full-dataset model experiments.
 
 ## Implementation and scientific interpretation
 
-Three package files implement M6: `analysis.py`, `cli.py`, `__main__.py`; `pyproject.toml` registers `cs2guard = cs2guard_demo.cli:main`.
+The initial M6 implementation introduced `analysis.py`, `cli.py` and `__main__.py`; `pyproject.toml` registers `cs2guard = cs2guard_demo.cli:main`.
 Matplotlib, already used and installed for M2, is declared as a runtime dependency because reports require it.
 Missing setuptools build support in the existing environment initially blocked a no-build-isolation install; the ordinary isolated build installs only the build requirements already declared by the project.
 No additional modeling, reporting or CLI dependency is introduced.
@@ -1715,62 +1715,18 @@ Commands executed from the repository root:
 git diff --check
 ```
 
-Final complete suite: **274 passed, 0 failed, 0 skipped**. `pip check`, syntax compilation, canonical imports and CLI help pass.
+Initial audit suite: **274 passed, 0 failed, 0 skipped**. `pip check`, syntax compilation, canonical imports and CLI help pass.
 All **75 Python files** parse; **26 non-namespace implementation modules** and **20 scripts** import successfully. No configured lint/type-check tool exists.
 Historical training scripts were imported and covered through library tests, not executed on the full dataset. They retain their expected `demo_analyzer/` working directory and data prerequisites.
 The multi-source builder's help and rollback/header paths are exercised, without overwriting research datasets.
 
 ### Initial acceptance protocol
 
-These checks map to the eleven README criteria in their original order. The recorded initial results and later corrections remain in the sections below. Automated checks use a controlled parser, actual M1–M5 code, a small persisted classifier and real PNG output.
+Automated checks covered all eleven README criteria with a controlled parser, actual M1–M5 code, a small persisted classifier and real PNG output. Five fixture players remained present; unavailable scores were null. Fixture scores and player means agreed, invalid model/input cases were rejected, and ties or reordered input preserved ranking. Round bounds, unknown associations, boundary flags and the three-window display limit matched the fixtures.
 
-For targeted checks, run from the repository root after installing the project with its `dev` extra:
+RF/tree baseline plus signed contributions reconstructed window/player scores within `1e-12`. Saved JSON matched returned data; Markdown image links resolved, PNGs were nonconstant and physical units and unavailable indicators remained explicit. CLI help and scoring succeeded; invalid input, missing model and zero scored windows exited 2. These checks remain in `test_analysis.py` and `test_aim_visualization.py`; the commands above run them with the complete suite.
 
-```powershell
-$python = '.\.venv\Scripts\python.exe'
-$analysis = 'demo_analyzer/tests/test_analysis.py'
-```
-
-| Criterion | Targeted automated command | Acceptance check |
-|---|---|---|
-| 1. Single command | `& $python -m pytest -q $analysis -k 'end_to_end or cli_analysis'` | Fixture scores, JSON/Markdown and PNGs agree; inference never fits a model. |
-| 2. Every player | `& $python -m pytest -q $analysis -k 'end_to_end or insufficient_data or single_player'` | All five fixture players remain present; unavailable scores are null with reasons. |
-| 3. Overall scores | `& $python -m pytest -q $analysis -k 'end_to_end or probability_uses or incompatible_model or invalid_model'` | Fixture window scores are 0/1 and player means 0.5/1; invalid inputs are rejected. |
-| 4. Behavioral indicators | `& $python -m pytest -q $analysis -k end_to_end` | Physical units, measurements and unavailable indicators are explicit. |
-| 5. Ranking | `& $python -m pytest -q $analysis -k ranking` | Ties and reordered input preserve ranking; unscored players follow scored players. |
-| 6. Round inspection | `& $python -m pytest -q $analysis -k 'end_to_end or single_player'` | Bounds, round IDs, null associations and boundary flags match the fixture. |
-| 7. Event inspection | `& $python -m pytest -q $analysis -k 'end_to_end or single_player'` | Shot IDs, bounds and nearby events agree; unrelated events are excluded; selection is capped at three per player. |
-| 8. Explanations | `& $python -m pytest -q $analysis -k 'end_to_end or contributions'` | Baseline plus signed contributions reconstructs window/player scores for RF and native trees; other model families remain unavailable. |
-| 9. Visualizations | `& $python -m pytest -q $analysis demo_analyzer/tests/test_aim_visualization.py -k 'end_to_end or export'` | Nonconstant PNGs have positive dimensions and an accurate victim/shot-direction reference. |
-| 10. Match report | `& $python -m pytest -q $analysis -k 'end_to_end or insufficient_data'` | Saved JSON equals returned data; Markdown image links resolve and missing data stays visible. |
-| 11. CLI | `& $python -m pytest -q $analysis -k cli` | Help and scoring succeed; invalid input, missing model and zero scored windows exit 2. |
-
-After the analysis command above, inspect the generated report without rerunning inference:
-
-```powershell
-$LASTEXITCODE # Check immediately after cs2guard analyze.
-$out = '.\demo_analyzer\data\processed\m6_validation'
-$report = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $out 'report.json') | ConvertFrom-Json
-$report.summary
-$report.players | Format-Table rank,player_id,player_name,score,window_count,status
-$report.players[0].behavioral_scores | ConvertTo-Json -Depth 5
-$report.rounds | Format-Table number,start_tick,end_tick,window_count,max_window_score
-$report.review_events | Select-Object player_id,round_number,shot_tick,start_tick,end_tick,score
-$report.review_events[0] | ConvertTo-Json -Depth 8
-$report.feature_importance
-$report.players[0].model_contributions
-$report.windows[0].model_contributions
-$report.limitations
-$report.review_events.visualization | Format-Table path,reference,sample_count
-Test-Path (Join-Path $out 'report.json')
-Test-Path (Join-Path $out 'report.md')
-Get-ChildItem -LiteralPath $out -Filter '*.png'
-Invoke-Item (Join-Path $out 'report.md')
-.\.venv\Scripts\cs2guard.exe analyze '.\missing.dem' --model '.\demo_analyzer\models\supervised\random_forest_v1.joblib' --output $out
-$LASTEXITCODE # Expected: 2 and an explicit "Analysis failed" message.
-```
-
-Compare these fields against the recorded local-demo results below: finite 0–1 player means, canonical IDs, descending ranks, explicit unavailable indicators, round-context counts, score reconstruction and report/PNG consistency. The initial run used shot-direction references only; later observed-victim plots belong to the robustness audit.
+The initial real run used shot-direction references only. The recorded results below preserve that evidence; observed-victim plots were demonstrated during the subsequent robustness audit.
 
 ### Real local demo
 
@@ -1810,14 +1766,14 @@ After confirming task test sessions finished and checking actual Python/pytest p
 No other data is deleted. `.gitignore` additionally protects `.pytest_tmp*/` against accidental tracking; this is a guard, not the fix.
 Complete native pytest execution is followed by a directory check: **zero `.pytest_tmp*` directories at repository root or under `demo_analyzer/`**.
 
-## Remaining validation limits
+## Initial audit limits
 
 The software pipeline is implemented and tested; M6 is **not declared entirely validated**.
 Calibrated behavioral probabilities and a validated operational threshold do not exist in M1–M5 and are not invented here.
 Local RF/tree path contributions reconstruct predictions, but do not establish causal importance or support non-tree estimator families.
-Ordinary-demo accuracy requires independent labels and validation of the CS2CD-to-demo domain shift. Model metadata omits extraction/version details, so structural compatibility does not establish scientific validity.
+Independent labels and a validated CS2CD-to-demo transfer were absent. Model metadata omits extraction/version details, so structural compatibility does not establish scientific validity.
 Real target tracking and fully associated round context remain partially demonstrated as described above.
-No new full-dataset training, held-out model comparison or live server validation is claimed. No commit or push is performed.
+This initial audit did not repeat full-dataset training or held-out model comparisons and did not evaluate a live server. No commit or push was performed.
 
 # M6 — Targeted robustness validation (2026-10-14)
 
@@ -1932,7 +1888,7 @@ git status --short
 Get-ChildItem -Force -Directory -Path '.', '.\demo_analyzer' -Filter '.pytest_tmp*'
 ```
 
-Expected: 76 targeted / 292 total tests; CLI exit 0 for every local demo; counts and scores in the table above; unchanged model hash; no `.pytest_tmp*` directories. Inspect the generated Markdown, PNGs and the exact per-window CSV evidence referenced above. To repeat a demo, call the same installed CLI into another unique directory and compare JSON recursively with numeric absolute tolerance `1e-12`; all other fields must match.
+Recorded on 2026-10-14: 76 targeted / 292 total tests, CLI exit 0 for every local demo, counts and scores as above, unchanged model hash and no `.pytest_tmp*` directories. The repeated analysis compared all JSON fields with numeric absolute tolerance `1e-12`; other fields and all PNG bytes matched.
 
 ## G. Validation status and limits
 
@@ -2018,9 +1974,9 @@ Get-ChildItem -LiteralPath $study -Filter '*.png' | Invoke-Item
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Scientific conclusions require the recorded real-study results below. This
-negative-only study cannot measure external recall, ROC-AUC or PR-AUC, validate
-calibration, identify cheaters or demonstrate generalization.
+This negative-only study measured score distributions and descriptive flag rates.
+It cannot measure external recall, ROC-AUC or PR-AUC, validate calibration,
+identify cheaters or demonstrate generalization.
 
 ## Real external study — 2026-10-14
 
@@ -2099,6 +2055,100 @@ repeat source parsing. Final evidence is in
 remain presumed; score concentration is observed on this sample; threshold flags
 are measured descriptively; distribution differences are observable; external
 cheater detection, calibration and generalization remain **unvalidated**.
+
+# M6 — CS2CD evaluation (2026-10-15)
+
+## Data, provenance and executed protocol
+
+The local JSON/Parquet inventory contains **795 CS2CD matches**. The existing `supervised_dataset.csv` contains **397,487 retained windows from 317 matches**. Reapplying the historical grouped split (`test_size=0.20`, `random_state=42`) gives **253 training matches / 306,315 windows / 2,471 scored player-matches** and **64 test matches / 91,172 windows / 637 scored player-matches**. Training has 1,399 legitimate and 1,072 suspicious player-matches; test has **402 legitimate and 235 suspicious**, a positive prevalence of **36.8917%**.
+
+Raw test labels contain **640 player-matches**. Three legitimate roster players have no retained features and remain unscored: `126.json / Player_7`, `178.json / Player_8` and `217.json / Player_5` have no raw `weapon_fire` event. Classification metrics use the 637 scored observations; rankings exclude the three unscored players, and Hit@k uses the 64 matches containing scored labeled suspects. Labels and match-scoped canonical IDs agree between the retained historical CSV and raw CS2CD rosters. The additional **478 JSON/Parquet pairs**, disjoint from both historical partitions, contain no annotated cheaters. They are absent from the inspected development artifacts; this does not prove they were never viewed. Missing cheater annotations become `legitimate` under the existing adapter and do not establish independently confirmed legitimacy.
+
+The persisted **Random Forest v1** is used without fitting, tuning or calibration. Its SHA-256 is `322ea64dddf12164824a5269371429ae87f714f7a2c0bf89c2eb10185cc09d11`. The six ordered aim features, preprocessing, **32 consecutive player ticks / 64 Hz**, arithmetic-mean player-match scores and descending score / ascending canonical-ID tie order are unchanged. Historical inference uses retained canonical CSV features; additional matches use the existing CS2CD adapter and canonical builder. **No native `.dem` parsing is evaluated.**
+
+The adapter now projects the **16 consumed Parquet columns** instead of reading all 222 columns present in a diagnostic match. Its normalization, feature extraction and inference rules are unchanged. On that real match, full and projected reads yield **1,622,913 exactly identical canonical ticks** and **5,443 byte-identical feature rows** (`io_projection_validation.json`). This checks data equivalence on one match; the recorded single-run timings are not a benchmark. PyArrow, already installed for Parquet support, is now an explicit runtime dependency.
+
+The historical bundle records counts and metrics but no dataset fingerprint, partition lists or extraction version. The present split is reconstructed from the current CSV, whose SHA-256 is `05ab29065646747b997908e7a17fd181cf0a73328db4a372f8c7d3e171f8b437`. Matching counts and frozen-model metrics support consistency; they do not provide retrospective cryptographic proof of historical dataset identity.
+
+Classification metrics give equal weight to scored player-matches. Average Precision uses `average_precision_score`, not trapezoidal PR area. Hit@k gives equal weight to matches containing a scored labeled suspect and measures whether at least one such player ranks in the first k positions. The fixed **0.10–0.90** threshold grid uses `>=`; it is descriptive and selects no operational threshold. **5,000 fixed-seed (42) percentile bootstrap draws resample whole matches**, retaining within-match dependence. Intervals condition on the frozen model and independent matches; anonymization prevents measuring recurring real-player dependence across matches. Windows are never treated as independent resampling observations.
+
+## Historical test reproduction
+
+| Player-match metric | Result | 95% match-bootstrap interval |
+|---|---:|---|
+| ROC-AUC | 0.777898 | [0.729588, 0.819406] |
+| Average Precision | 0.683983 | [0.599999, 0.757946] |
+| Hit@1 | 44/64 = 0.687500 | [0.562500, 0.796875] |
+| Hit@3 | 59/64 = 0.921875 | [0.843750, 0.984375] |
+
+All 64 historical test matches contain scored labeled suspects. ROC-AUC and AP exactly reproduce the metadata values **0.7778977453159733 / 0.6839833414991215**, previously rounded to **0.7779 / 0.6840** in M5. Model, population, grouped split, aggregation and metric definitions agree. These matches already informed M5 evaluation and descriptive threshold analysis, so this is **reproduction of the historical experiment**, not a new independent estimate of generalization.
+
+| Threshold | Precision | Recall | F1 | FPR | TN | FP | FN | TP |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0.10 | 0.3689 | 1.0000 | 0.5390 | 1.0000 | 0 | 402 | 0 | 235 |
+| 0.20 | 0.3689 | 1.0000 | 0.5390 | 1.0000 | 0 | 402 | 0 | 235 |
+| 0.30 | 0.6234 | 0.6340 | 0.6287 | 0.2239 | 312 | 90 | 86 | 149 |
+| 0.40 | 0.8033 | 0.2085 | 0.3311 | 0.0299 | 390 | 12 | 186 | 49 |
+| 0.50 | 1.0000 | 0.0851 | 0.1569 | 0.0000 | 402 | 0 | 215 | 20 |
+| 0.60 | 1.0000 | 0.0340 | 0.0658 | 0.0000 | 402 | 0 | 227 | 8 |
+| 0.70 | 1.0000 | 0.0170 | 0.0335 | 0.0000 | 402 | 0 | 231 | 4 |
+| 0.80 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 402 | 0 | 235 | 0 |
+| 0.90 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 402 | 0 | 235 | 0 |
+
+The table concerns player-match means; historical M5 window-level threshold metrics have different denominators. At 0.50, recall is only **20/235**, despite zero observed false positives. Its 95% match-bootstrap recall interval is **[0.046082, 0.126582]**; the FPR interval is degenerate **[0, 0]** and does not establish zero population risk. Precision is zero by convention when no player is flagged. Complete threshold intervals are retained in `historical_test_metrics.json`.
+
+Error inventories retain ten low-scoring labeled suspects and ten high-scoring labeled legitimate players. The lowest-scoring suspect is match `cs2cd_933b2a9d40151a48` / `Player_4`: **0.246399**, six windows, rank 10. Another suspect scores **0.250059** over 176 windows, so low scores are not confined to players with very few windows. The highest-scoring legitimate player is match `cs2cd_966bc4025553eeec` / `Player_8`: **0.491801**, 232 windows, rank 1. A labeled legitimate player ranks first in **20/64 matches**; **5/64** have no labeled suspect in the top three.
+
+Legitimate player-match scores have mean/median **0.284594/0.274929**, versus **0.350395/0.318411** for labeled suspects. Historical match mean scores range **0.262760–0.488359**, with varying positive prevalence; 39/64 matches use Dust II or Mirage. These descriptive differences establish no map effect or causal explanation. The error cases expose missed labeled suspects and ranking errors under the dataset annotations; they do not adjudicate actual cheating.
+
+## Additional cohort with negative annotations
+
+The completed run processes all **478 additional matches** and extracts **1,268,375 windows**. **477 matches / 4,726 player-matches** receive scores, all labeled legitimate under the adapter's annotation rule. The roster contains **4,779 player-matches**, including **53 unscored players across 20 matches**. The entirely unscored match `455.json` (`cs2cd_0835357838ac262a`) has no `weapon_fire` event and yields no feature windows. Unscored roster entries retain unavailable scores; zero is not imputed. Classification denominators and the match bootstrap exclude unavailable scores; the latter resamples the 477 scored matches.
+
+Checking `CS2CDAdapter.get_events()` on those 20 JSON files finds **zero canonical shot events for all 53 unscored players**: ten belong to the entirely unscored match and 43 to the other 19 matches. No player with canonical shot events lacks feature windows. This describes the supplied canonical data, not proof that no real shot occurred (`data_quality_diagnostics.json`, `complete_cohort.unscored_player_shot_coverage`).
+
+The existing adapter retains **498,335,087 of 505,144,089 raw tick rows** and excludes **6,809,002 (1.3479%)** with missing or nonfinite required identity, position or view-angle values. These totals come from the complete extraction receipts. A separate diagnostic on two matches selected from an earlier 82-match snapshot reproduces their discarded counts and finds missing position and view-angle fields together. That selected diagnostic does not estimate cohort-wide causes or prove unbiased coverage. The retained canonical windows contain **40,588,000 tick rows**; canonical normalization and imputation rules are unchanged.
+
+| Threshold (>=) | TN | FP | FPR | 95% match-bootstrap interval |
+|---|---:|---:|---:|---|
+| 0.10 | 0 | 4,726 | 1.000000 | [1.000000, 1.000000] |
+| 0.20 | 1 | 4,725 | 0.999788 | [0.999361, 1.000000] |
+| 0.30 | 3,483 | 1,243 | 0.263013 | [0.244794, 0.281640] |
+| 0.40 | 4,526 | 200 | 0.042319 | [0.035001, 0.050266] |
+| 0.50 | 4,665 | 61 | 0.012907 | [0.009072, 0.017143] |
+| 0.60 | 4,702 | 24 | 0.005078 | [0.002736, 0.007877] |
+| 0.70 | 4,708 | 18 | 0.003809 | [0.001693, 0.006356] |
+| 0.80 | 4,712 | 14 | 0.002962 | [0.001264, 0.005078] |
+| 0.90 | 4,714 | 12 | 0.002539 | [0.001055, 0.004435] |
+
+At every threshold, TP and FN are zero and precision is zero under the supplied negative annotations. **ROC-AUC, Average Precision, recall, F1 and Hit@k are unavailable**, not evidence of zero detection performance: this cohort contains no annotated positives. FPR measures disagreement with those annotations, not adjudicated cheating. Its intervals are conditional on scored coverage and independent matches. This cohort is kept separate from the historical test, preserving the latter's prevalence and comparison with M5.
+
+The **61 player-matches flagged at 0.50 span 44 scored matches**. Score mean/median are **0.289650/0.273359**, P99 is **0.518744**, and the maximum is **0.997079** for `cs2cd_d63d08339edb4053 / Player_9`, based on five windows and ranked first. Match mean scores range **0.248276–0.480783**. These high scores disagree with annotations even where historical test FPR was zero; they establish neither actual cheating nor its absence. Labels, limited behavioral coverage and transfer to native demos remain scientific limits.
+
+The **12 player-matches scoring at least 0.90** span nine matches and 318 windows. Reinspection confirms finite features and scores, including five distinct windows for the maximum case; seven cases come from four matches with no discarded ticks. This establishes atypical values, not their cause; no additional filtering or minimum-window threshold is applied (`error_distribution_diagnostics.json`).
+
+## Executed checks
+
+The evaluation exits **0** with `integrity.json` marked **complete**. All training/evaluation match intersections are empty. Model, metadata and historical dataset hashes remain unchanged; historical ROC-AUC/AP differences are exactly zero. Reloading the frozen model and repeating inference changes any window score by at most **5.551115123125783e-16**, below the **1e-12** check tolerance. Independently recomputed player means agree with window-score means. A separate real-source extraction repeats **158 windows byte-identically** on one match; full-cohort raw re-extraction is not claimed.
+
+A separate exhaustive verifier exits **0** and reproduces RF scores, player means, ranks, roster coverage, metrics and bootstrap intervals from **all 478 canonical caches / 1,268,375 windows**, including the empty cache. It verifies all **478 source Parquet hashes**, the **795 JSON sources**, frozen code and source archives; archive comparison confirms unchanged scientific transformations across the Parquet read change. Historical test checks also pass. This verifies persisted canonical features and inference, not complete raw re-extraction (`verification.json`, `verification_run.log`).
+
+The preservation check passes for **407 SHA-256 fingerprints**, including the model, metadata, historical datasets and **403 historical M6 output files**. File sets in the three historical output directories are unchanged, including the 2026-10-14 robustness and external studies (`integrity_preservation.json`).
+
+The complete automated suite passes **345 tests**. `pip check`, syntax compilation and `git diff --check` pass. **M6 status: complete within its functional and technical scope, with a documented internal scientific evaluation.** These software checks do not establish calibrated probabilities, an operational threshold, independent positive-case generalization or native-demo detection performance.
+
+## Reproduction and retained evidence
+
+From the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe demo_analyzer/scripts/evaluate_cs2cd.py
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Outputs are retained under ignored `demo_analyzer/data/processed/validation_cs2cd_20261015/`. `protocol.json` freezes model/metadata/dataset hashes, code, versions, Git state and settings before inference; `sources.zip` preserves source. `partitions.json`, `raw_inventory.csv` and `raw_roster.csv` identify matches and labels. Historical window scores are retained in CSV; new-cohort windows remain in per-match canonical feature caches and use the frozen inference path. Population CSVs retain player means, ranks, coverage and error cases; `historical_test_metrics.json` and `unused_negative_metrics.json` retain full intervals, and `*_by_match.json` retains match-level results. `extraction_integrity.json` records complete raw/retained counts and source/feature hashes; `integrity.json` records final checks. `report.md` summarizes both populations. Resume checks cache receipts and repeats scoring and metrics; a different `--output` directory performs a fresh extraction. Interrupted attempts are archived separately, including the protocol before the verified Parquet projection. The prior M5/M6 artifacts and the 2026-10-14 external study are retained separately.
+
+The protocol field `contract.raw_inventory_sha256` hashes the inventory's canonical JSON representation via `digest_json(inventory)`, not the bytes of `raw_inventory.csv`; a different CSV-file hash is expected.
 
 # Future Milestones
 

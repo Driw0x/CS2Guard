@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
     "demoparser2",
     "pandas",
+    "pyarrow",
     "numpy",
     "scikit-learn",
     "joblib",
