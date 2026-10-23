@@ -1,5 +1,8 @@
 # CS2Guard — Demo Analyzer Project Memory
 
+[English](demo_analyzer_memory.md) | [Français](demo_analyzer_memory.fr.md) | [简体中文](demo_analyzer_memory.zh-CN.md)
+
+
 ## 1. Purpose
 
 This document keeps track of the development of the **CS2Guard Demo Analyzer**.

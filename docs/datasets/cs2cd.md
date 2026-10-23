@@ -1,5 +1,10 @@
 # CS2CD Integration
 
+[English](cs2cd.md) | [Français](cs2cd.fr.md) | [简体中文](cs2cd.zh-CN.md)
+
+[Project README](../../README.md)
+
+
 ## Purpose
 
 This document describes how the CS2CD dataset is integrated into the CS2Guard Dataset Builder.

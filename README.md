@@ -1,5 +1,8 @@
 # CS2Guard
 
+[English](README.md) | [Français](README.fr.md) | [简体中文](README.zh-CN.md)
+
+
 **Machine Learning-Based Behavioral Cheat Detection for Counter-Strike 2**
 
 CS2Guard is an experimental machine learning project designed to detect suspicious player behavior in Counter-Strike 2.
