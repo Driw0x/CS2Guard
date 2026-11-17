@@ -68,7 +68,7 @@ Development starts with offline demo research and model training, then targets l
 
 ## 🧠 Project Approach
 
-### Stage 1 — Offline Demo Analysis
+### Stage 1 - Offline Demo Analysis
 
 The offline analyzer parses recorded matches, extracts behavioral features and evaluates ML models without real-time constraints.
 
@@ -91,7 +91,7 @@ ML Detection
 Suspicion Score
 ```
 
-### Stage 2 — Real-Time Server-Side Detection
+### Stage 2 - Real-Time Server-Side Detection
 
 The planned server-side system adapts the offline pipeline to live telemetry, reusing features and models where possible.
 
@@ -126,7 +126,7 @@ Player Suspicion Score
 
 # 🗺️ Roadmap
 
-## M1 — Demo Parsing
+## M1 - Demo Parsing
 
 Build the foundation for extracting structured gameplay data from CS2 demo files.
 
@@ -145,7 +145,7 @@ Build the foundation for extracting structured gameplay data from CS2 demo files
 
 ---
 
-## M2 — Aim Feature Engineering
+## M2 - Aim Feature Engineering
 
 Transform raw gameplay data into measurable aiming behavior.
 
@@ -164,7 +164,7 @@ Transform raw gameplay data into measurable aiming behavior.
 
 ---
 
-## M3 — Dataset Builder
+## M3 - Dataset Builder
 
 Create a reproducible pipeline for generating machine-learning-ready datasets from multiple matches.
 
@@ -190,7 +190,7 @@ The **CS2CD** adapter maps anonymized gameplay and player-level cheat labels to 
 
 ---
 
-## M4 — Anomaly Detection
+## M4 - Anomaly Detection
 
 Build the first ML-based behavioral detector without requiring large amounts of labeled cheating data.
 
@@ -207,7 +207,7 @@ Build the first ML-based behavioral detector without requiring large amounts of 
 
 ---
 
-## M5 — Supervised Detection
+## M5 - Supervised Detection
 
 Train classification models once sufficiently reliable labeled data becomes available.
 
@@ -228,7 +228,7 @@ On historical CS2CD held-out matches, Random Forest achieves player-match **ROC-
 
 ---
 
-## M6 — Demo Analyzer
+## M6 - Demo Analyzer
 
 * [x] Analyze an entire demo from a single command
 * [x] Analyze every player in the match, retaining insufficient-data players without a score
@@ -256,7 +256,7 @@ See [CS2CD results and protocol](docs/demo_analyzer_memory.md#m6--cs2cd-evaluati
 
 ---
 
-## M7 — Temporal Modeling
+## M7 - Temporal Modeling
 
 Investigate whether sequence-based ML models improve behavioral detection.
 
@@ -273,22 +273,43 @@ Tick t+n
 Temporal Model
 ```
 
-* [ ] Define fixed-length tick sequences
-* [ ] Build a temporal dataset
-* [ ] Implement a simple temporal baseline
-* [ ] Experiment with 1D CNN models
-* [ ] Experiment with LSTM / GRU models
-* [ ] Experiment with Transformer-based models
-* [ ] Compare temporal and feature-based models
-* [ ] Measure inference performance
-* [ ] Analyze which sequences trigger predictions
-* [ ] Integrate the best model into the Demo Analyzer
+* [x] Define fixed-length tick sequences
+* [x] Build a temporal dataset
+* [x] Implement a simple temporal baseline
+* [x] Experiment with 1D CNN models
+* [x] Experiment with LSTM / GRU models
+* [x] Experiment with Transformer-based models
+* [x] Compare temporal and feature-based models
+* [x] Measure inference performance
+* [x] Analyze which sequences trigger predictions
+* [x] Integrate the best model into the Demo Analyzer
 
 **Milestone result:** CS2Guard can analyze player behavior as temporal sequences rather than only aggregated statistics.
 
+### M7 implementation status
+
+The engineering path is implemented: 32-tick sequences become six aim-kinematic channels, normalized from the training split, then consumed by a flattened logistic baseline, CNN, LSTM, GRU, and Transformer. Match-grouped train/validation/test isolation reuses the M5 test split. PyTorch bundles can already be loaded by `cs2guard analyze`, and zero-occlusion reports expose time-step and channel sensitivity.
+
+Build the dataset from the repository root, then retrain only the Transformer in WSL2 with ROCm:
+
+```powershell
+.\.venv\Scripts\python.exe demo_analyzer/scripts/build_temporal_dataset.py
+cs2guard analyze match.dem --model demo_analyzer/models/temporal/transformer_v1.pt
+```
+
+```bash
+source ~/.venvs/cs2guard-rocm/bin/activate
+export HSA_ENABLE_DXG_DETECTION=1
+python demo_analyzer/scripts/train_temporal.py --device cuda --models transformer --epochs 5 --m5-model demo_analyzer/models/supervised/random_forest_v1.joblib
+```
+
+The full run contains 397,480 sequences: 242,996 train, 63,315 validation, and 91,169 locked test sequences. The Transformer retrained on the RX 7800 XT with ROCm reached **0.7794** validation player-match PR-AUC and **ROC-AUC 0.8282 / PR-AUC 0.7500** on the M5 held-out matches, versus **0.7779 / 0.6840** for frozen M5. Paired 1,000-draw match bootstrap differences were **+0.0503 ROC-AUC [0.0272, 0.0766]** and **+0.0660 PR-AUC [0.0376, 0.0957]**. Hit@1 remained 44/64 and Hit@3 59/64. Under WSL2 Ubuntu 24.04, PyTorch 2.9.1, and ROCm 7.2, GPU batch-1 inference measured 0.520 ms median / 0.951 ms p95; batch-256 throughput was about 239,474 sequences/s.
+
+These are internal results on the previously used M5 test matches, not independent validation. The 0.50 threshold is not operationally validated, and outputs remain uncalibrated inspection scores rather than cheating probabilities or proof.
+
 ---
 
-## M8 — Awareness Analysis
+## M8 - Awareness Analysis
 
 Extend behavioral detection beyond aim to investigate suspicious enemy awareness.
 
@@ -311,7 +332,7 @@ Interpret awareness in context: sound, teammates, common angles and game sense c
 
 ---
 
-## M9 — Real-Time Detection Engine
+## M9 - Real-Time Detection Engine
 
 Adapt the offline machine learning pipeline for streaming gameplay data.
 
@@ -351,7 +372,7 @@ Suspicion Score
 
 ---
 
-## M10 — Server-Side Real-Time Anti-Cheat
+## M10 - Server-Side Real-Time Anti-Cheat
 
 Integrate the detection engine into a CS2 server-side environment.
 

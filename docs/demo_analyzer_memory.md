@@ -1,4 +1,4 @@
-# CS2Guard — Demo Analyzer Project Memory
+# CS2Guard - Demo Analyzer Project Memory
 
 [English](demo_analyzer_memory.md) | [Français](demo_analyzer_memory.fr.md) | [简体中文](demo_analyzer_memory.zh-CN.md)
 
@@ -22,7 +22,7 @@ Its long-term objective is to analyze Counter-Strike 2 demo files and extract me
 
 ---
 
-# M1 — Demo Parsing Foundation
+# M1 - Demo Parsing Foundation
 
 ## Objective
 
@@ -162,7 +162,7 @@ to:
 
 ---
 
-# M2 — Aim Feature Extraction
+# M2 - Aim Feature Extraction
 
 ## Objective
 
@@ -335,7 +335,7 @@ These aim features provide the first behavioral signals that can later be combin
 
 ---
 
-# M3 — Dataset Builder
+# M3 - Dataset Builder
 
 ## Objective
 
@@ -537,7 +537,7 @@ The project now has the dataset foundation required for later model training and
 
 ---
 
-# M4 — Anomaly Detection
+# M4 - Anomaly Detection
 
 ## Objective
 
@@ -911,7 +911,7 @@ M4 provides the anomaly-detection baseline required for the supervised experimen
 
 ---
 
-# M5 — Supervised Detection
+# M5 - Supervised Detection
 
 ## Objective
 
@@ -1573,9 +1573,9 @@ M5 provides the supervised model used by the offline Demo Analyzer in M6.
 
 ---
 
-# M6 — Demo Analyzer
+# M6 - Demo Analyzer
 
-## Initial audit scope and reference state — 2026-10-14
+## Initial audit scope and reference state - 2026-10-14
 
 The audit and implementation on 2026-10-14 preserve the README roadmap: M6 is offline demo analysis. Server-side streaming remains M9/M10; `server_side/` is unchanged.
 The initial branch was `main`, with no tracked local changes. The project uses a setuptools `src` layout and canonical `cs2guard_demo` imports.
@@ -1778,7 +1778,7 @@ Independent labels and a validated CS2CD-to-demo transfer were absent. Model met
 Real target tracking and fully associated round context remain partially demonstrated as described above.
 This initial audit did not repeat full-dataset training or held-out model comparisons and did not evaluate a live server. No commit or push was performed.
 
-# M6 — Targeted robustness validation (2026-10-14)
+# M6 - Targeted robustness validation (2026-10-14)
 
 This follow-up validates the existing implementation, preserving all earlier local edits and the original `m6_validation/` outputs. Generated evidence lives under `demo_analyzer/data/processed/m6_robustness_20261014/`: `reference/`, three `before/` analyses, three `after/` analyses, a repeated `test.dem` analysis in `repeat/`, and independent checks in `audit/<demo stem>/`. Each audit includes `validation.json`, `raw_round_events.json`, and CSV/JSON inventories of every unassigned and crossing window. `corrections.diff` isolates this task's changes to three implementation files from the pre-existing implementation.
 
@@ -1900,7 +1900,7 @@ Recorded on 2026-10-14: 76 targeted / 292 total tests, CLI exit 0 for every loca
 * Multiple-demo robustness: validated on all three available local demos, not on arbitrary recording formats or populations.
 * Scientific score validity on ordinary demos: not validated. Independent labels, domain-shift evaluation, appropriate calibration data and extraction-version metadata remain absent. No new operational threshold, probability of cheating, verdict or retraining is introduced. Removing `weapon_` does not infer undocumented aliases such as silenced-weapon differences in hurt events.
 
-# M6 — Presumed-legitimate external evaluation
+# M6 - Presumed-legitimate external evaluation
 
 `cs2guard_demo.validation` evaluates local demos under
 `demo_analyzer/data/raw/held_out/legitimate/` with the existing frozen RF bundle.
@@ -1981,7 +1981,7 @@ This negative-only study measured score distributions and descriptive flag rates
 It cannot measure external recall, ROC-AUC or PR-AUC, validate calibration,
 identify cheaters or demonstrate generalization.
 
-## Real external study — 2026-10-14
+## Real external study - 2026-10-14
 
 All **nine** available new demos were analyzed: **90 scored/detected player-match
 observations**, **57 observable Steam identities**, **29,010 scored windows**, no
@@ -2059,7 +2059,7 @@ remain presumed; score concentration is observed on this sample; threshold flags
 are measured descriptively; distribution differences are observable; external
 cheater detection, calibration and generalization remain **unvalidated**.
 
-# M6 — CS2CD evaluation (2026-10-15)
+# M6 - CS2CD evaluation (2026-10-15)
 
 ## Data, provenance and executed protocol
 
@@ -2153,6 +2153,30 @@ Outputs are retained under ignored `demo_analyzer/data/processed/validation_cs2c
 
 The protocol field `contract.raw_inventory_sha256` hashes the inventory's canonical JSON representation via `digest_json(inventory)`, not the bytes of `raw_inventory.csv`; a different CSV-file hash is expected.
 
+<a id="m7-temporal-modeling-implementation"></a>
+# M7 - Temporal modeling implementation
+
+M7 now has an executable engineering path. `build_temporal_dataset.py` converts each complete canonical 32-tick shot window into six ordered float32 channels: yaw velocity, pitch velocity, angular speed, yaw acceleration, pitch acceleration, and angular-acceleration magnitude. Yaw differences wrap across -180°/180°. The NPZ dataset retains window, match, player, target, and split arrays. Its adjacent JSON records schema version, channel order, 64 Hz tick rate, seed, counts, and normalization fitted only on training rows.
+
+The split keeps M5's match-grouped 20% test partition, then takes validation matches only from the remaining training side. A flattened logistic-regression baseline and four compact PyTorch candidates are implemented: 1D CNN, LSTM, GRU, and one-layer Transformer Encoder. Neural training uses weighted binary cross-entropy, seed 42, and validation player-match PR-AUC early stopping. `train_temporal.py` accepts `--device auto|cpu|cuda`; ROCm uses the `torch.cuda` API, so `--device cuda` requires the AMD GPU and fails when it is unavailable. Selection orders candidates by validation player-match PR-AUC, ROC-AUC, latency on the selected device, parameter count, then name. The locked test is read only after selection.
+
+`train_temporal.py` can compare the selected temporal model, temporal logistic baseline, and frozen M5 Random Forest on aligned test windows. It reports window/player metrics, Hit@1/Hit@3, paired match-bootstrap differences, batch-1 latency, batch-256 throughput, and zero-occlusion sensitivity by time step and channel. PyTorch bundles contain a `state_dict` plus JSON metadata. `cs2guard analyze` dispatches from `model_family`, preserves the existing M5 joblib path, and includes temporal occlusion data in JSON/Markdown reports.
+
+Reproduction commands:
+
+```bash
+# WSL2 Ubuntu 24.04 with ROCm 7.2 and ROCDXG installed
+source ~/.venvs/cs2guard-rocm/bin/activate
+export HSA_ENABLE_DXG_DETECTION=1
+python demo_analyzer/scripts/train_temporal.py --device cuda --models transformer --epochs 5 --m5-model demo_analyzer/models/supervised/random_forest_v1.joblib
+```
+
+Software tests cover sequence shape, angular wrapping, split isolation, train-only normalization, all four model families, persistence, occlusion, legacy M5 compatibility, and temporal end-to-end demo analysis. The full build produced **397,480 sequences**: 242,996 train, 63,315 validation, and 91,169 locked test rows. After at most five epochs on the RX 7800 XT, Transformer validation player-match PR-AUC was **0.779367**. It remains above the previously recorded LSTM (0.7597), GRU (0.7553), CNN (0.7441), and logistic-regression (0.6608) results.
+
+On the historical M5 test matches, the ROCm Transformer reached **player-match ROC-AUC 0.828231 / PR-AUC 0.750003**, versus **0.777898 / 0.683983** for the frozen M5 Random Forest and **0.689690 / 0.616041** for temporal logistic regression. Paired match bootstrap differences against M5 were **+0.050333 ROC-AUC, 95% CI [0.027248, 0.076609]**, and **+0.066019 PR-AUC, 95% CI [0.037595, 0.095683]**, over 1,000 draws. Hit@1 was 44/64 and Hit@3 was 59/64. At threshold 0.50, window precision/recall/F1/FPR were 0.376901/0.490888/0.426408/0.299632; this threshold remains descriptive and unvalidated.
+
+The recorded WSL2 Ubuntu 24.04 / Python 3.12.3 / PyTorch 2.9.1 / ROCm 7.2 run on an **AMD Radeon RX 7800 XT** measured batch-1 inference at 0.520 ms median and 0.951 ms p95 over 100 repetitions. Batch 256 measured 1.069 ms median, approximately 239,474 sequences/s. Detailed metrics, bundle, history, CPU/GPU benchmarks, occlusion JSON, and ten plots remain in ignored `demo_analyzer/data/processed/m7_temporal_rocm/`. The selected 9,825-parameter bundle is retained as `demo_analyzer/models/temporal/transformer_v1.pt`, with the ROCm environment recorded in adjacent metadata. These results reuse previously evaluated M5 test matches and do not provide independent validation. Scores remain uncalibrated inspection priorities rather than cheating probabilities or proof.
+
 # Future Milestones
 
-M7–M10 remain future work. M6 validation limitations above remain visible rather than being converted into unsupported scientific claims.
+M8–M10 remain future work. Independent positive validation, operational threshold selection, and calibration remain open for M7. M6 validation limitations above remain visible rather than being converted into unsupported scientific claims.

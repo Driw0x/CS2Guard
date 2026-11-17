@@ -1,7 +1,7 @@
 [English](demo_analyzer_memory.md) | [Français](demo_analyzer_memory.fr.md) | [简体中文](demo_analyzer_memory.zh-CN.md)
 
 <a id="cs2guard--demo-analyzer-project-memory"></a>
-# CS2Guard — 演示分析器项目内存
+# CS2Guard - 演示分析器项目内存
 
 <a id="1-purpose"></a>
 ## 1. 目的
@@ -24,7 +24,7 @@
 ---
 
 <a id="m1--demo-parsing-foundation"></a>
-# M1 — 演示解析基础
+# M1 - 演示解析基础
 
 <a id="objective"></a>
 ## 目标
@@ -179,7 +179,7 @@ CS2Guard models
 ---
 
 <a id="m2--aim-feature-extraction"></a>
-# M2 — 瞄准特征提取
+# M2 - 瞄准特征提取
 
 <a id="objective-1"></a>
 ## 目标
@@ -366,7 +366,7 @@ CS2Guard现在能够将原始视角数据转化为结构化的瞄准行为特征
 ---
 
 <a id="m3--dataset-builder"></a>
-# M3 — 数据集构建器
+# M3 - 数据集构建器
 
 <a id="objective-2"></a>
 ## 目标
@@ -588,7 +588,7 @@ CS2Guard 现在能够将多个对局的数据转换为结构化、可重用的�
 ---
 
 <a id="m4--anomaly-detection"></a>
-# M4 — 异常检测
+# M4 - 异常检测
 
 <a id="objective-3"></a>
 ## 目标
@@ -979,7 +979,7 @@ M4为M5计划中的监督实验提供了异常检测基线。
 ---
 
 <a id="m5--supervised-detection"></a>
-# M5 — 监督检测
+# M5 - 监督检测
 
 <a id="objective-4"></a>
 ## 目标
@@ -1664,10 +1664,10 @@ M5为M6中的离线Demo Analyzer提供了所使用的监督模型。
 ---
 
 <a id="m6--demo-analyzer"></a>
-# M6 — Demo Analyzer
+# M6 - Demo Analyzer
 
 <a id="initial-audit-scope-and-reference-state--2026-10-14"></a>
-## 初始审计范围和参考状态 — 2026-10-14
+## 初始审计范围和参考状态 - 2026-10-14
 
 2026-10-14的审计与实施保留了README路线图：M6是离线演示分析。服务器端流处理仍为M9/M10；`server_side/`保持不变。初始分支为`main`，且无本地跟踪变更。项目采用setuptools布局`src`和标准导入`cs2guard_demo`。所有Python源码、20个历史脚本、测试用例、包/测试配置、架构文档以及持久化的M5元数据均已检查。模型构件、数据集和研究成果均被保留。
 
@@ -1815,7 +1815,7 @@ RF/树基线加上带符号的贡献，重构了窗口/玩家得分，位于`1e-
 软件流水线已实现并经过测试；M6**并未被完全声明为已验证**。M1至M5中不存在校准的行为概率和已验证的操作阈值，也未在此处被发明。本地RF/树路径贡献项可以重构预测结果，但无法确立因果重要性，也无法支持非树估计器家族。独立标签和已验证的CS2CD到演示的转移均不存在。模型元数据缺少提取/版本细节，因此结构兼容性无法确立科学有效性。实际目标追踪和完全关联的回合上下文如上所述仍部分展示。本次初始审计未重复完整数据集训练，也未进行留出模型对比，且未评估实时服务器。未提交任何代码或推送操作。
 
 <a id="m6--targeted-robustness-validation-2026-10-14"></a>
-# M6 — 目标鲁棒性验证（2026-10-14）
+# M6 - 目标鲁棒性验证（2026-10-14）
 
 本后续验证了现有实现，保留了所有先前的本地编辑以及原始`m6_validation/`输出。生成的证据位于`demo_analyzer/data/processed/m6_robustness_20261014/`下：`reference/`，三个`before/`分析，三个`after/`分析，一个在`repeat/`中重复的`test.dem`分析，以及在`audit/<demo stem>/`中的独立检查。每个审计均包含`validation.json`、`raw_round_events.json`，以及每个未分配和穿越窗口的CSV/JSON清单。`corrections.diff`将此任务的变更隔离到三个实现文件中，这些文件来自原有的实现。
 
@@ -1945,7 +1945,7 @@ Get-ChildItem -Force -Directory -Path '.', '.\demo_analyzer' -Filter '.pytest_tm
 * 科学评分在普通演示上的有效性：未验证。独立标签、领域迁移评估、适当的校准数据以及提取版本元数据均缺失。未引入新的操作阈值、作弊概率、裁决或再训练。移除`weapon_`不会推断出未记录的别名，例如伤害事件中被沉默武器的差异。
 
 <a id="m6--presumed-legitimate-external-evaluation"></a>
-# M6 — 假设合法的外部评估
+# M6 - 假设合法的外部评估
 
 `cs2guard_demo.validation`在`demo_analyzer/data/raw/held_out/legitimate/`下对本地演示进行评估，使用现有的冻结RF包。它直接调用M6，保留评分、特征、玩家身份、质量计数以及RF路径贡献。可选的`review_plots=False`参数会抑制本研究中每个玩家的瞄准PNG图像；普通M6调用保留其原有的图表。没有特征、窗口、评分、训练或校准协议的变更。
 
@@ -1995,7 +1995,7 @@ Get-ChildItem -LiteralPath $study -Filter '*.png' | Invoke-Item
 这项仅包含负样本的研究测量了分数分布和描述性标记率。它无法测量外部回忆、ROC-AUC或PR-AUC，无法验证校准性，无法识别作弊者，也无法证明泛化能力。
 
 <a id="real-external-study--2026-10-14"></a>
-## 真实外部研究 — 2026-10--14
+## 真实外部研究 - 2026-10--14
 
 所有 **九** 个可用的新演示版本均被分析：**90个评分/检测到的玩家匹配观察**，**57个可观察的Steam身份**，**29,010个评分窗口**，没有失败或排除的演示版本，也没有未评分的玩家。所有90个标签均基于用户声明被视为合法；没有任何标签被独立确认或标记为未知。所有报告均为`partial`：**685个窗口缺乏完整回合上下文**，且**415个窗口跨越回合边界**，根据历史提取合同予以保留。评分玩家的窗口数量范围为114至858（中位数为304.5）。
 
@@ -2016,7 +2016,7 @@ CS2CD比较使用了**282,022个合法窗口/1,801个玩家匹配**作为完整�
 证据分类：技术处理已完成；验证标签仍保持假设状态；本样本中评分集中现象被观察到；阈值标志以描述性方式测量；分布差异可被观察到；外部作弊检测、校准与泛化能力仍**未验证**。
 
 <a id="m6--cs2cd-evaluation-2026-10-15"></a>
-# M6 — CS2CD评估（2026-10-15）
+# M6 - CS2CD评估（2026-10-15）
 
 <a id="data-provenance-and-executed-protocol"></a>
 ## 数据、来源与执行协议
@@ -2115,7 +2115,31 @@ CS2CD比较使用了**282,022个合法窗口/1,801个玩家匹配**作为完整�
 
 协议字段 `contract.raw_inventory_sha256` 通过 `digest_json(inventory)` 对库存的规范 JSON 表示进行哈希，而非对 `raw_inventory.csv` 的字节进行哈希；预期使用另一个 CSV 文件的哈希。
 
+<a id="m7-temporal-modeling-implementation"></a>
+# M7 - 时序建模实现
+
+M7 现在具备可执行的工程路径。`build_temporal_dataset.py` 将每个以射击结束的完整 32-tick 规范窗口转换为六个有序 float32 通道：yaw 速度、pitch 速度、角速度、yaw 加速度、pitch 加速度和角加速度幅值。yaw 差值正确处理 -180°/180° 环绕。NPZ 保存窗口、比赛、玩家、目标和划分数组；相邻 JSON 记录模式版本、通道顺序、64 Hz tick 率、随机种子、计数以及仅在训练集上拟合的归一化参数。
+
+数据划分保留 M5 按比赛分组的 20% 测试集，再仅从剩余训练部分抽取验证比赛。系统实现了展平逻辑回归基线和四个紧凑 PyTorch 候选模型：1D CNN、LSTM、GRU 和单层 Transformer Encoder。神经网络训练使用加权二元交叉熵、随机种子 42，并基于验证集玩家-比赛 PR-AUC 提前停止。`train_temporal.py` 接受 `--device auto|cpu|cuda`；ROCm 使用 `torch.cuda` API，因此 `--device cuda` 会强制使用 AMD GPU，并在 GPU 不可用时失败。候选模型依次按 PR-AUC、ROC-AUC、所选设备上的延迟、参数数量和名称选择。锁定测试集仅在选择完成后读取。
+
+`train_temporal.py` 可在对齐测试窗口上比较选定时序模型、时序逻辑回归基线和冻结的 M5 随机森林。报告包括窗口/玩家指标、Hit@1/Hit@3、按比赛配对 bootstrap 差值、batch 1 延迟、batch 256 吞吐量，以及按 tick 和通道计算的零值遮挡敏感度。PyTorch bundle 由 `state_dict` 和 JSON 元数据组成。`cs2guard analyze` 根据 `model_family` 分派，保留现有 M5 joblib 路径，并在 JSON/Markdown 报告中加入时序遮挡数据。
+
+复现命令：
+
+```bash
+# 已安装 ROCm 7.2 和 ROCDXG 的 WSL2 Ubuntu 24.04
+source ~/.venvs/cs2guard-rocm/bin/activate
+export HSA_ENABLE_DXG_DETECTION=1
+python demo_analyzer/scripts/train_temporal.py --device cuda --models transformer --epochs 5 --m5-model demo_analyzer/models/supervised/random_forest_v1.joblib
+```
+
+软件测试覆盖序列形状、角度环绕、划分隔离、仅训练集归一化、四类模型、持久化、遮挡、M5 兼容性和端到端时序 demo 分析。完整构建产生 **397,480 个序列**：242,996 个训练序列、63,315 个验证序列和 91,169 个锁定测试序列。在 RX 7800 XT 上最多训练五个 epoch 后，Transformer 的验证集玩家-比赛 PR-AUC 为 **0.779367**，仍高于此前记录的 LSTM（0.7597）、GRU（0.7553）、CNN（0.7441）和逻辑回归（0.6608）。
+
+在历史 M5 测试比赛上，ROCm Transformer 达到 **玩家-比赛 ROC-AUC 0.828231 / PR-AUC 0.750003**，冻结 M5 随机森林为 **0.777898 / 0.683983**，时序逻辑回归为 **0.689690 / 0.616041**。相对 M5 的按比赛配对 bootstrap 差值为 **ROC-AUC +0.050333，95% 区间 [0.027248, 0.076609]** 和 **PR-AUC +0.066019，95% 区间 [0.037595, 0.095683]**，共 1,000 次抽样。Hit@1 为 44/64，Hit@3 为 59/64。在 0.50 阈值下，窗口级 precision/recall/F1/FPR 为 0.376901/0.490888/0.426408/0.299632；该阈值仍是描述性的，尚未验证。
+
+记录的 WSL2 Ubuntu 24.04 / Python 3.12.3 / PyTorch 2.9.1 / ROCm 7.2 运行使用 **AMD Radeon RX 7800 XT**。batch 1 在 100 次重复上的推理中位数为 0.520 ms，p95 为 0.951 ms；batch 256 中位数为 1.069 ms，约每秒 239,474 个序列。详细指标、bundle、训练历史、CPU/GPU 基准数据、遮挡 JSON 和十张图保留在被忽略的 `demo_analyzer/data/processed/m7_temporal_rocm/`。选定的 9,825 参数 bundle 保存在 `demo_analyzer/models/temporal/transformer_v1.pt`，相邻元数据中记录了 ROCm 环境。这些结果复用了已评估过的 M5 测试比赛，不构成独立验证。分数仍是未校准的检查优先级，而不是作弊概率或证据。
+
 <a id="future-milestones"></a>
 # 未来里程碑
 
-M7 至 M10 仍为未来工作。上述 M6 验证限制依然可见，而非被转化为不支持的科学声明。
+M8 至 M10 仍属未来工作。M7 仍需独立阳性验证、运行阈值选择和校准。上述 M6 验证限制依然可见，而非被转化为不支持的科学声明。

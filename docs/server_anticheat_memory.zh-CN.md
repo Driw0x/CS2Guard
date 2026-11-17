@@ -3,7 +3,7 @@
 [项目 README](../README.zh-CN.md)
 
 <a id="cs2guard--server-side-anti-cheat-project-memory"></a>
-# CS2Guard — 服务器端反作弊项目内存
+# CS2Guard - 服务器端反作弊项目内存
 
 <a id="purpose"></a>
 ## 目的

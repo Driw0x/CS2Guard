@@ -1,0 +1,324 @@
+{
+  "model_family": "temporal",
+  "model_name": "transformer",
+  "version": "v1",
+  "architecture": "transformer",
+  "hidden_size": 32,
+  "channels": [
+    "yaw_velocity",
+    "pitch_velocity",
+    "angular_speed",
+    "yaw_acceleration",
+    "pitch_acceleration",
+    "angular_acceleration"
+  ],
+  "window_size": 32,
+  "tick_rate": 64.0,
+  "normalization": {
+    "mean": [
+      0.11743460595607758,
+      0.8150348663330078,
+      25.511192321777344,
+      -1.436574101448059,
+      3.1714107990264893,
+      806.3955078125
+    ],
+    "scale": [
+      84.46453857421875,
+      37.7490234375,
+      88.93315124511719,
+      5247.18701171875,
+      2488.626953125,
+      5751.171875
+    ],
+    "fit_split": "train"
+  },
+  "label_mapping": {
+    "legitimate": 0,
+    "suspicious": 1
+  },
+  "decision_threshold": null,
+  "validation": {
+    "window": {
+      "precision": 0.4104368932038835,
+      "recall": 0.46550679953752133,
+      "f1": 0.4362407450403736,
+      "roc_auc": 0.6393846479219032,
+      "pr_auc": 0.4480578764246652,
+      "false_positive_rate": 0.26898033309709424,
+      "tn": 33007,
+      "fp": 12145,
+      "fn": 9708,
+      "tp": 8455
+    },
+    "player": {
+      "roc_auc": 0.8134807775956101,
+      "pr_auc": 0.7793669308564104
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 0.9282429330599935,
+      "validation": {
+        "window": {
+          "precision": 0.3770189003436426,
+          "recall": 0.48323514837857184,
+          "f1": 0.42356972226914075,
+          "roc_auc": 0.6156701269242972,
+          "pr_auc": 0.4161391126152606,
+          "false_positive_rate": 0.3212039333805812,
+          "tn": 30649,
+          "fp": 14503,
+          "fn": 9386,
+          "tp": 8777
+        },
+        "player": {
+          "roc_auc": 0.7819955164452773,
+          "pr_auc": 0.7364337610833954
+        }
+      }
+    },
+    {
+      "epoch": 2,
+      "loss": 0.9100268446144305,
+      "validation": {
+        "window": {
+          "precision": 0.38543162597734165,
+          "recall": 0.5319605791994715,
+          "f1": 0.4469940551918762,
+          "roc_auc": 0.6363954214537986,
+          "pr_auc": 0.4419301186837087,
+          "false_positive_rate": 0.3412030474840539,
+          "tn": 29746,
+          "fp": 15406,
+          "fn": 8501,
+          "tp": 9662
+        },
+        "player": {
+          "roc_auc": 0.804229263559407,
+          "pr_auc": 0.7598333081087905
+        }
+      }
+    },
+    {
+      "epoch": 3,
+      "loss": 0.9049494216944042,
+      "validation": {
+        "window": {
+          "precision": 0.3818019625334523,
+          "recall": 0.5419809502835434,
+          "f1": 0.44800436899831614,
+          "roc_auc": 0.6335723719176918,
+          "pr_auc": 0.43368059225028793,
+          "false_positive_rate": 0.35300761871013464,
+          "tn": 29213,
+          "fp": 15939,
+          "fn": 8319,
+          "tp": 9844
+        },
+        "player": {
+          "roc_auc": 0.8038277511961722,
+          "pr_auc": 0.760256970791047
+        }
+      }
+    },
+    {
+      "epoch": 4,
+      "loss": 0.9019095349311829,
+      "validation": {
+        "window": {
+          "precision": 0.39427191458712874,
+          "recall": 0.5123602929031548,
+          "f1": 0.44562562850165205,
+          "roc_auc": 0.638908769358178,
+          "pr_auc": 0.4453259948560002,
+          "false_positive_rate": 0.31664156626506024,
+          "tn": 30855,
+          "fp": 14297,
+          "fn": 8857,
+          "tp": 9306
+        },
+        "player": {
+          "roc_auc": 0.8107036504165691,
+          "pr_auc": 0.7746986118917706
+        }
+      }
+    },
+    {
+      "epoch": 5,
+      "loss": 0.9004177503209365,
+      "validation": {
+        "window": {
+          "precision": 0.4104368932038835,
+          "recall": 0.46550679953752133,
+          "f1": 0.4362407450403736,
+          "roc_auc": 0.6393846479219032,
+          "pr_auc": 0.4480578764246652,
+          "false_positive_rate": 0.26898033309709424,
+          "tn": 33007,
+          "fp": 12145,
+          "fn": 9708,
+          "tp": 8455
+        },
+        "player": {
+          "roc_auc": 0.8134807775956101,
+          "pr_auc": 0.7793669308564104
+        }
+      }
+    }
+  ],
+  "training_environment": {
+    "device": "cuda",
+    "device_name": "AMD Radeon RX 7800 XT",
+    "python": "3.12.3",
+    "platform": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "torch": "2.9.1+rocm7.2.1.gitff65f5bc",
+    "rocm": "7.2.53211-e1a6bc5663"
+  },
+  "selection": {
+    "criterion": "validation player-match PR-AUC, then ROC-AUC, inference latency, parameter count, and name",
+    "selected": true,
+    "candidates": [
+      "transformer"
+    ]
+  },
+  "training_protocol": {
+    "random_state": 42,
+    "max_epochs": 5,
+    "early_stopping_patience": 3,
+    "loss": "weighted BCEWithLogitsLoss",
+    "train_sequences": 242996,
+    "validation_sequences": 63315,
+    "test_sequences": 91169,
+    "test_locked_until_selection": true
+  },
+  "test": {
+    "transformer": {
+      "window": {
+        "precision": 0.37690121490365097,
+        "recall": 0.4908883826879271,
+        "f1": 0.4264084942494214,
+        "roc_auc": 0.6379464301750445,
+        "pr_auc": 0.42280248869619774,
+        "false_positive_rate": 0.2996320492603439,
+        "tn": 46634,
+        "fp": 19951,
+        "fn": 12516,
+        "tp": 12068
+      },
+      "player": {
+        "roc_auc": 0.8282311845030168,
+        "pr_auc": 0.7500026171636109
+      }
+    },
+    "temporal_logistic_regression": {
+      "window": {
+        "precision": 0.5515564202334631,
+        "recall": 0.02306378132118451,
+        "f1": 0.044276120568483526,
+        "roc_auc": 0.55075960108976,
+        "pr_auc": 0.3211896796359082,
+        "false_positive_rate": 0.006923481264549072,
+        "tn": 66124,
+        "fp": 461,
+        "fn": 24017,
+        "tp": 567
+      },
+      "player": {
+        "roc_auc": 0.6896898486291944,
+        "pr_auc": 0.6160412539701865
+      }
+    },
+    "m5_random_forest": {
+      "window": {
+        "precision": 0.5671715917556494,
+        "recall": 0.09290595509274324,
+        "f1": 0.15965887246164062,
+        "roc_auc": 0.5932720245618488,
+        "pr_auc": 0.3818966807809608,
+        "false_positive_rate": 0.026177066906961026,
+        "tn": 64842,
+        "fp": 1743,
+        "fn": 22300,
+        "tp": 2284
+      },
+      "player": {
+        "roc_auc": 0.7778977453159733,
+        "pr_auc": 0.6839833414991215
+      }
+    }
+  },
+  "hit_at_1": {
+    "hits": 44,
+    "matches": 64,
+    "rate": 0.6875
+  },
+  "hit_at_3": {
+    "hits": 59,
+    "matches": 64,
+    "rate": 0.921875
+  },
+  "benchmark_cpu": {
+    "environment": {
+      "python": "3.12.3",
+      "platform": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+      "torch": "2.9.1+rocm7.2.1.gitff65f5bc"
+    },
+    "batch_1": {
+      "device": "cpu",
+      "median_seconds": 0.00023905599999807237,
+      "p95_seconds": 0.0005461806500875354,
+      "repeats": 100
+    },
+    "batch_256": {
+      "device": "cpu",
+      "median_seconds": 0.002026875000012751,
+      "p95_seconds": 0.004862380399970333,
+      "repeats": 100,
+      "samples": 256,
+      "throughput_samples_per_second": 126302.80604299204
+    }
+  },
+  "paired_bootstrap": {
+    "pr_auc": {
+      "difference": 0.0660192756644894,
+      "ci95": [
+        0.037595220835194385,
+        0.09568314496931221
+      ],
+      "iterations": 1000,
+      "resampling_unit": "match"
+    },
+    "roc_auc": {
+      "difference": 0.05033343918704347,
+      "ci95": [
+        0.027247532285315495,
+        0.07660909054529824
+      ],
+      "iterations": 1000,
+      "resampling_unit": "match"
+    }
+  },
+  "benchmark_rocm": {
+    "environment": {
+      "device_name": "AMD Radeon RX 7800 XT",
+      "torch": "2.9.1+rocm7.2.1.gitff65f5bc",
+      "rocm": "7.2.53211-e1a6bc5663"
+    },
+    "batch_1": {
+      "device": "cuda",
+      "median_seconds": 0.0005196619999878749,
+      "p95_seconds": 0.0009506090499996845,
+      "repeats": 100
+    },
+    "batch_256": {
+      "device": "cuda",
+      "median_seconds": 0.001069008499996471,
+      "p95_seconds": 0.0013590032499280367,
+      "repeats": 100,
+      "samples": 256,
+      "throughput_samples_per_second": 239474.24178652003
+    }
+  }
+}

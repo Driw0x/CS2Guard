@@ -1,7 +1,7 @@
 [English](demo_analyzer_memory.md) | [Français](demo_analyzer_memory.fr.md) | [简体中文](demo_analyzer_memory.zh-CN.md)
 
 <a id="cs2guard--demo-analyzer-project-memory"></a>
-# CS2Guard — Analyseur de démo Projet Mémoire
+# CS2Guard - Analyseur de démo Projet Mémoire
 
 <a id="1-purpose"></a>
 ## 1. Objectif
@@ -24,7 +24,7 @@ Son objectif à long terme est d'analyser les fichiers de démo de Counter-Strik
 ---
 
 <a id="m1--demo-parsing-foundation"></a>
-# M1 — Fondation de l'analyse de démo
+# M1 - Fondation de l'analyse de démo
 
 <a id="objective"></a>
 ## Objectif
@@ -179,7 +179,7 @@ Le projet peut donc passer de :
 ---
 
 <a id="m2--aim-feature-extraction"></a>
-# M2 — Extraction des caractéristiques d'objectif
+# M2 - Extraction des caractéristiques d'objectif
 
 <a id="objective-1"></a>
 ## Objectif
@@ -366,7 +366,7 @@ Ces caractéristiques d'orientation fournissent les premiers signaux comportemen
 ---
 
 <a id="m3--dataset-builder"></a>
-# M3 — Constructeur de jeu de données
+# M3 - Constructeur de jeu de données
 
 <a id="objective-2"></a>
 ## Objectif
@@ -588,7 +588,7 @@ Le projet possède désormais la base de données requise pour les étapes ulté
 ---
 
 <a id="m4--anomaly-detection"></a>
-# M4 — Détection d'anomalies
+# M4 - Détection d'anomalies
 
 <a id="objective-3"></a>
 ## Objectif
@@ -979,7 +979,7 @@ M4 fournit la base de détection d'anomalie nécessaire aux expériences supervi
 ---
 
 <a id="m5--supervised-detection"></a>
-# M5 — Détection supervisée
+# M5 - Détection supervisée
 
 <a id="objective-4"></a>
 ## Objectif
@@ -1664,10 +1664,10 @@ M5 fournit le modèle supervisé utilisé par l'analyse de démo en mode hors li
 ---
 
 <a id="m6--demo-analyzer"></a>
-# M6 — Analyse de démo
+# M6 - Analyse de démo
 
 <a id="initial-audit-scope-and-reference-state--2026-10-14"></a>
-## Portée initiale de l'audit et état de référence — 2026-10-14
+## Portée initiale de l'audit et état de référence - 2026-10-14
 
 L'audit et la mise en œuvre du 2026-10-14 conservent le plan de la documentation README : M6 est une analyse de démo hors ligne. Le streaming côté serveur reste M9/M10 ; `server_side/` reste inchangé. La branche initiale était `main`, sans modifications locales enregistrées. Le projet utilise une structure `src` de setuptools et des imports canoniques `cs2guard_demo`. Tous les fichiers Python, les 20 scripts historiques, les tests, la configuration de package/test, les documents d'architecture et les métadonnées persistées de M5 ont été inspectés. Les artefacts de modèle, les ensembles de données et les résultats de recherche ont été conservés.
 
@@ -1815,7 +1815,7 @@ Les dossiers `.pytest_tmp*` proviennent des commandes explicites de cette tâche
 La chaîne logicielle est mise en œuvre et testée ; M6 n'est pas **entièrement validée**. Les probabilités de comportement calibrées et un seuil opérationnel validé n'existent pas dans M1–M5 et ne sont pas inventés ici. Les contributions des chemins RF/arbre local reconstruisent les prédictions, mais ne permettent ni de définir une importance causale ni de soutenir des familles d'estimateurs autres que les arbres. Des étiquettes indépendantes et une transfert validé CS2CD-vers-démonstration étaient absentes. Les métadonnées du modèle omettent les détails d'extraction/versions, donc la compatibilité structurelle ne permet pas de valider scientifiquement. Le suivi ciblé de la cible et le contexte complet associé restent partiellement démontrés comme décrit ci-dessus. Cet audit initial n'a pas répété la formation sur l'ensemble de données, ni les comparaisons avec des modèles réservés, ni évalué un serveur en temps réel. Aucune mise à jour ou déploiement n'a été effectuée.
 
 <a id="m6--targeted-robustness-validation-2026-10-14"></a>
-# M6 — Validation de robustesse ciblée (14 octobre 2026)
+# M6 - Validation de robustesse ciblée (14 octobre 2026)
 
 Cet examen de suivi valide l'implémentation existante, en conservant tous les édits locaux précédents et les sorties originales `m6_validation/`. Les preuves générées se trouvent sous `demo_analyzer/data/processed/m6_robustness_20261014/` : `reference/`, trois analyses `before/`, trois analyses `after/`, une analyse répétée `test.dem` dans `repeat/`, et des vérifications indépendantes dans `audit/<demo stem>/`. Chaque audit inclut `validation.json`, `raw_round_events.json`, ainsi que des inventaires CSV/JSON de chaque fenêtre non attribuée et de chaque fenêtre croisant. `corrections.diff` isole les modifications de cette tâche dans trois fichiers d'implémentation provenant de l'implémentation existante.
 
@@ -1945,7 +1945,7 @@ Enregistré le 2026-10-14 : 76 cibles / 292 tests totaux, sortie CLI à 0 pour c
 * Validité du score scientifique sur des démonstrations ordinaires : non validée. Les étiquettes indépendantes, l'évaluation de décalage de domaine, les données d'ajustement appropriées et les métadonnées de version d'extraction manquent. Aucune nouvelle seuil opérationnel, probabilité de fraude, verdict ou retraining n'est introduite. L'élimination de `weapon_` ne permet pas d'inférer des alias non documentés tels que les différences entre armes silencieuses dans les événements de dommages.
 
 <a id="m6--presumed-legitimate-external-evaluation"></a>
-# M6 — Évaluation externe supposée légitime
+# M6 - Évaluation externe supposée légitime
 
 `cs2guard_demo.validation` évalue des démonstrations locales sous `demo_analyzer/data/raw/held_out/legitimate/` avec le bundle RF existant et gelé. Il appelle directement M6, conservant les scores, les caractéristiques, les identités des joueurs, les compteurs de qualité et les contributions des chemins RF. L'argument facultatif `review_plots=False` supprime les images PNG de visée par joueur pour cette étude ; les appels ordinaires à M6 conservent leurs graphiques existants. Aucune modification n'est apportée aux contrats de caractéristique, de fenêtre, de notation, de formation ou d'ajustement.
 
@@ -1995,7 +1995,7 @@ Get-ChildItem -LiteralPath $study -Filter '*.png' | Invoke-Item
 Cette étude unilatérale négative a mesuré les distributions de scores et les taux d'indicateurs descriptifs. Elle ne peut pas mesurer le rappel externe, l'ROC-AUC ou le PR-AUC, valider la calibration, identifier les tricheurs ou démontrer la généralisation.
 
 <a id="real-external-study--2026-10-14"></a>
-## Étude externe réelle — 2026-10-14
+## Étude externe réelle - 2026-10-14
 
 Tous les **neuf** nouveaux démonstrations disponibles ont été analysés : **90 observations de correspondance joueur**, **57 identités observables Steam**, **29 010 fenêtres évaluées**, aucune démonstration échouée ou exclue et aucun joueur non évalué. Tous les 90 étiquettes sont considérés comme légitimes selon la déclaration de l'utilisateur ; aucune n'est confirmée indépendamment ni marquée comme inconnue. Tous les rapports sont `partial` : **685 fenêtres manquent de contexte de tour complet** et **415 franchissent une frontière de tour**, conservées selon le contrat d'extraction historique. Les joueurs évalués ont de 114 à 858 fenêtres (médiane 304,5).
 
@@ -2016,7 +2016,7 @@ Baseline automatisée : **292 cas passés** après correction du stockage tempor
 Classification de la preuve : traitement technique terminé ; les étiquettes de validation restent supposées ; la concentration des scores est observée sur cette échantillon ; les indicateurs de seuil sont mesurés de manière descriptive ; les différences de distribution sont observables ; la détection des tricheurs externes, la calibration et la généralisation restent **non validées**.
 
 <a id="m6--cs2cd-evaluation-2026-10-15"></a>
-# M6 — évaluation CS2CD (2026-10-15)
+# M6 - évaluation CS2CD (2026-10-15)
 
 <a id="data-provenance-and-executed-protocol"></a>
 ## Données, provenance et protocole exécuté
@@ -2115,7 +2115,31 @@ Les sorties sont conservées sous `demo_analyzer/data/processed/validation_cs2cd
 
 Le champ de protocole `contract.raw_inventory_sha256` hachage la représentation JSON canonique de l'inventaire via `digest_json(inventory)`, et non les octets de `raw_inventory.csv` ; un hachage différent de fichier CSV est attendu.
 
+<a id="m7-temporal-modeling-implementation"></a>
+# M7 - Implémentation de la modélisation temporelle
+
+M7 dispose maintenant d'un chemin technique exécutable. `build_temporal_dataset.py` transforme chaque fenêtre canonique complète de 32 ticks terminant sur un tir en six canaux float32 ordonnés : vitesses yaw et pitch, vitesse angulaire, accélérations yaw et pitch, et amplitude d'accélération angulaire. Les différences yaw gèrent le passage -180°/180°. Le NPZ conserve les tableaux de fenêtre, match, joueur, cible et split. Son JSON adjacent enregistre version du schéma, ordre des canaux, fréquence de 64 Hz, seed, compteurs et normalisation ajustée uniquement sur l'entraînement.
+
+Le split conserve le test de 20 % groupé par match de M5, puis prélève les matchs de validation uniquement dans la partie entraînement restante. Une baseline de régression logistique aplatie et quatre candidats PyTorch compacts sont implémentés : CNN 1D, LSTM, GRU et Transformer Encoder à une couche. L'entraînement neuronal utilise une entropie croisée binaire pondérée, le seed 42 et un arrêt anticipé sur la PR-AUC joueur-match de validation. `train_temporal.py` accepte `--device auto|cpu|cuda` ; ROCm utilise l'API `torch.cuda`, donc `--device cuda` impose le GPU AMD et échoue s'il n'est pas disponible. La sélection ordonne les candidats par PR-AUC, ROC-AUC, latence sur le périphérique choisi, nombre de paramètres, puis nom. Le test verrouillé n'est lu qu'après la sélection.
+
+`train_temporal.py` peut comparer le modèle temporel sélectionné, la baseline logistique temporelle et la Forêt aléatoire M5 gelée sur les mêmes fenêtres de test. Il rapporte métriques fenêtre/joueur, Hit@1/Hit@3, différences bootstrap appariées par match, latence batch 1, débit batch 256 et sensibilité par occlusion nulle selon le tick et le canal. Les bundles PyTorch contiennent un `state_dict` et un JSON. `cs2guard analyze` utilise `model_family`, préserve le chemin joblib M5 et ajoute l'occlusion temporelle aux rapports JSON/Markdown.
+
+Commandes de reproduction :
+
+```bash
+# WSL2 Ubuntu 24.04, avec ROCm 7.2 et ROCDXG installés
+source ~/.venvs/cs2guard-rocm/bin/activate
+export HSA_ENABLE_DXG_DETECTION=1
+python demo_analyzer/scripts/train_temporal.py --device cuda --models transformer --epochs 5 --m5-model demo_analyzer/models/supervised/random_forest_v1.joblib
+```
+
+Les tests logiciels couvrent forme des séquences, passage angulaire, isolation des splits, normalisation sur l'entraînement, quatre familles de modèles, persistance, occlusion, compatibilité M5 et analyse temporelle de bout en bout. La construction complète produit **397 480 séquences** : 242 996 d'entraînement, 63 315 de validation et 91 169 de test verrouillé. Après cinq epochs au maximum sur le RX 7800 XT, la PR-AUC joueur-match de validation du Transformer vaut **0,779367**. Elle reste supérieure aux valeurs précédemment enregistrées pour LSTM (0,7597), GRU (0,7553), CNN (0,7441) et régression logistique (0,6608).
+
+Sur les matchs de test historiques M5, le Transformer ROCm atteint **ROC-AUC joueur-match 0,828231 / PR-AUC 0,750003**, contre **0,777898 / 0,683983** pour la Forêt aléatoire M5 gelée et **0,689690 / 0,616041** pour la régression logistique temporelle. Les différences bootstrap appariées par match contre M5 sont **+0,050333 ROC-AUC, IC 95 % [0,027248 ; 0,076609]**, et **+0,066019 PR-AUC, IC 95 % [0,037595 ; 0,095683]**, sur 1 000 tirages. Hit@1 vaut 44/64 et Hit@3 59/64. Au seuil 0,50, précision/rappel/F1/FPR par fenêtre valent 0,376901/0,490888/0,426408/0,299632 ; ce seuil reste descriptif et non validé.
+
+L'exécution WSL2 Ubuntu 24.04 / Python 3.12.3 / PyTorch 2.9.1 / ROCm 7.2 sur un **AMD Radeon RX 7800 XT** mesure 0,520 ms en médiane et 0,951 ms au p95 pour le batch 1 sur 100 répétitions. Le batch 256 mesure 1,069 ms en médiane, soit environ 239 474 séquences/s. Métriques détaillées, bundle, historique, benchmarks CPU/GPU, JSON d'occlusion et dix graphiques restent dans `demo_analyzer/data/processed/m7_temporal_rocm/` ignoré. Le bundle sélectionné de 9 825 paramètres est conservé sous `demo_analyzer/models/temporal/transformer_v1.pt` avec l'environnement ROCm dans ses métadonnées. Ces résultats réutilisent les matchs de test M5 déjà évalués et ne constituent pas une validation indépendante. Les scores restent des priorités d'inspection non calibrées, pas des probabilités ni des preuves de triche.
+
 <a id="future-milestones"></a>
 # Étapes futures
 
-M7 à M10 restent du travail futur. Les limitations de validation de M6 mentionnées ci-dessus restent visibles plutôt que de devenir des affirmations scientifiques non soutenues.
+M8 à M10 restent futurs. Une validation positive indépendante, le choix d'un seuil opérationnel et la calibration restent ouverts pour M7. Les limitations de validation de M6 restent visibles plutôt que de devenir des affirmations scientifiques non soutenues.

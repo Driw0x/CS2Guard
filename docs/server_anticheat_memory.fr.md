@@ -3,7 +3,7 @@
 [README du projet](../README.fr.md)
 
 <a id="cs2guard--server-side-anti-cheat-project-memory"></a>
-# CS2Guard — Projet de vérification anti-triche côté serveur
+# CS2Guard - Projet de vérification anti-triche côté serveur
 
 <a id="purpose"></a>
 ## Objectif

@@ -31,6 +31,12 @@ def load_analysis_model(model_path: str | Path) -> tuple[object, dict]:
     for path in (model_path, metadata_path):
         if not path.is_file():
             raise FileNotFoundError(f"Model bundle file not found: {path}")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if not isinstance(metadata, dict):
+        raise ValueError("Model metadata must be an object")
+    if metadata.get("model_family") == "temporal":
+        from cs2guard_demo.temporal_models import load_temporal_bundle
+        return load_temporal_bundle(model_path)
     model, metadata = load_model_bundle(model_path, metadata_path)
     if not isinstance(metadata, dict):
         raise ValueError("Model metadata must be an object")
@@ -185,6 +191,9 @@ def analyze_demo(demo_path: str | Path, model_path: str | Path, output_dir: str 
     builder = DatasetBuilder()
     windows = builder.build_canonical_temporal_windows(ticks, events, window_size=WINDOW_SIZE)
     features = builder.build_aim_features(windows, tick_rate=TICK_RATE)
+    temporal_sequences = None
+    temporal_importance = None
+    is_temporal = metadata.get("model_family") == "temporal"
 
     players_by_id = {}
     for player in roster:
@@ -213,14 +222,26 @@ def analyze_demo(demo_path: str | Path, model_path: str | Path, output_dir: str 
 
     scored_windows = []
     if not features.empty:
-        inputs = prepare_features(features)
-        probabilities = np.asarray(model.predict_proba(inputs))
-        if probabilities.shape != (len(features), 2) or not np.isfinite(probabilities).all():
-            raise ValueError("Model returned invalid probability dimensions or values")
-        if (probabilities < 0).any() or (probabilities > 1).any() or not np.allclose(probabilities.sum(axis=1), 1):
-            raise ValueError("Model returned invalid probabilities")
-        scores = probabilities[:, list(model.classes_).index(1)]
-        attribution = tree_probability_contributions(model, inputs)
+        if is_temporal:
+            from cs2guard_demo.temporal import build_inference_sequences, normalize_sequences
+            from cs2guard_demo.temporal_models import occlusion_importance, predict_probabilities
+            temporal_sequences, features = build_inference_sequences(windows, features)
+            normalization = metadata["normalization"]
+            temporal_sequences = normalize_sequences(temporal_sequences, normalization["mean"], normalization["scale"])
+            scores = predict_probabilities(model, temporal_sequences, device="cpu")
+            temporal_importance = occlusion_importance(model, temporal_sequences)
+            attribution = None
+        else:
+            inputs = prepare_features(features)
+            probabilities = np.asarray(model.predict_proba(inputs))
+            if probabilities.shape != (len(features), 2) or not np.isfinite(probabilities).all():
+                raise ValueError("Model returned invalid probability dimensions or values")
+            if (probabilities < 0).any() or (probabilities > 1).any() or not np.allclose(probabilities.sum(axis=1), 1):
+                raise ValueError("Model returned invalid probabilities")
+            scores = probabilities[:, list(model.classes_).index(1)]
+            attribution = tree_probability_contributions(model, inputs)
+        if np.asarray(scores).shape != (len(features),) or not np.isfinite(scores).all() or (scores < 0).any() or (scores > 1).any():
+            raise ValueError("Model returned invalid class-1 scores")
         if attribution is not None and not np.allclose(attribution[0] + attribution[1].sum(axis=1), scores, rtol=1e-12, atol=1e-12):
             raise ValueError("Tree contributions do not reconstruct model probabilities")
         player_scores = aggregate_player_scores(features, scores, "score").set_index("player_id")["score"]
@@ -252,6 +273,12 @@ def analyze_demo(demo_path: str | Path, model_path: str | Path, output_dir: str 
                     "features": dict(zip(FEATURE_COLUMNS, map(float, attribution[1][index]))),
                     "score": float(scores[index]),
                     "interpretation": "Signed root-to-leaf probability changes, averaged over trees; baseline plus contributions equals score. Path-dependent, not causal or SHAP.",
+                },
+                "temporal_importance": None if temporal_importance is None else {
+                    "method": "zero_occlusion",
+                    "steps": temporal_importance["by_step"][index].astype(float).tolist(),
+                    "channels": dict(zip(metadata["channels"], map(float, temporal_importance["by_channel"][index]))),
+                    "interpretation": "Score changes after replacing one normalized time step or channel with zero; descriptive, not causal.",
                 },
                 "explanation": "Measured features are descriptive; global importance is not a local contribution or proof of cheating. Local tree-path contributions are reported separately when supported.",
             })
@@ -312,7 +339,8 @@ def analyze_demo(demo_path: str | Path, model_path: str | Path, output_dir: str 
     report = {
         "match": {**adapter.get_metadata(), "demo_path": str(demo_path.resolve())},
         "model": {"path": str(model_path.resolve()), "model_name": metadata["model_name"],
-                  "version": metadata["version"], "features": FEATURE_COLUMNS,
+                  "version": metadata["version"], "family": metadata.get("model_family", "feature_based"),
+                  "features": metadata.get("channels", FEATURE_COLUMNS),
                   "decision_threshold": metadata.get("decision_threshold"), "threshold_applied": False,
                   "window_size": WINDOW_SIZE, "tick_rate": TICK_RATE,
                   "score_kind": "uncalibrated_supervised_class1_probability",
@@ -333,6 +361,7 @@ def analyze_demo(demo_path: str | Path, model_path: str | Path, output_dir: str 
             "Behavioral speed and acceleration indicators have physical units; they are not anomaly scores or probabilities and are not combined.",
             "Global feature importance describes the model as a whole; measured window features do not identify local causal contributions.",
             "Local RF/tree contributions telescope class-1 probabilities along existing tree paths. They depend on split order and are not causal effects or SHAP values; other model families have no local attribution here.",
+            "Temporal zero-occlusion importance measures score sensitivity to replacement by normalized zero; it is descriptive, model-dependent, and not causal.",
             "M5 was evaluated on CS2CD. Accuracy and calibration on ordinary demos have not been validated.",
             "Historical M5 metadata omits extraction settings; 32 ticks and 64 Hz follow the M3/M5 training scripts. Compatibility checks cannot establish scientific validity.",
             "Tracking uses observed victim positions only, without visibility, eye-height or hitbox reconstruction. Shot-direction plots are not target tracking.",
@@ -404,6 +433,11 @@ def write_report(report: dict, output_dir: Path) -> None:
             lines.extend(f"| {name} | {value:.6f} |" for name, value in contribution["features"].items())
         else:
             lines.extend(["", "Local model contributions unavailable for this estimator family."])
+        temporal = window.get("temporal_importance")
+        if temporal is not None:
+            lines.extend(["", "Temporal zero-occlusion importance is descriptive and not causal.", "",
+                          "| Channel | Score change when occluded |", "|---|---|"])
+            lines.extend(f"| {name} | {value:.6f} |" for name, value in temporal["channels"].items())
         lines.extend(["", "Events: " + ", ".join(f"{e['event_id']} {e['event_type']} at {e['tick']}" for e in window["events"]), ""])
         visual = window["visualization"]
         if visual["path"]:

@@ -1,4 +1,4 @@
-# CS2Guard — Server-Side Anti-Cheat Project Memory
+# CS2Guard - Server-Side Anti-Cheat Project Memory
 
 [English](server_anticheat_memory.md) | [Français](server_anticheat_memory.fr.md) | [简体中文](server_anticheat_memory.zh-CN.md)
 

@@ -5,6 +5,11 @@
 !demo_analyzer/models/supervised/*.json
 *.parquet
 *.joblib
+demo_analyzer/data/processed/temporal_dataset.npz
+demo_analyzer/data/processed/m7_temporal/
+demo_analyzer/data/processed/m7_temporal_rocm/
+!demo_analyzer/models/temporal/*.json
+!demo_analyzer/models/temporal/*.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

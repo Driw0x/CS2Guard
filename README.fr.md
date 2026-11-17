@@ -73,7 +73,7 @@ Le développement commence par une recherche sur des démos hors ligne et l'entr
 ## 🧠 Approche du projet
 
 <a id="stage-1--offline-demo-analysis"></a>
-### Phase 1 — Analyse hors ligne des démos
+### Phase 1 - Analyse hors ligne des démos
 
 L'analyse hors ligne lit les matchs enregistrés, extrait des caractéristiques comportementales et évalue les modèles d'apprentissage automatique sans contraintes en temps réel.
 
@@ -97,7 +97,7 @@ Suspicion Score
 ```
 
 <a id="stage-2--real-time-server-side-detection"></a>
-### Phase 2 — Détection en temps réel côté serveur
+### Phase 2 - Détection en temps réel côté serveur
 
 Le système côté serveur prévu adapte la chaîne de traitement hors ligne aux données en temps réel, en réutilisant les caractéristiques et les modèles autant que possible.
 
@@ -135,7 +135,7 @@ Player Suspicion Score
 # 🗺️ Plan d'actions
 
 <a id="m1--demo-parsing"></a>
-## M1 — Analyse de démonstration
+## M1 - Analyse de démonstration
 
 Construire la base pour extraire des données structurées de fichiers de démonstrations CS2.
 
@@ -155,7 +155,7 @@ Construire la base pour extraire des données structurées de fichiers de démon
 ---
 
 <a id="m2--aim-feature-engineering"></a>
-## M2 — Ingénierie de la cible
+## M2 - Ingénierie de la cible
 
 Transformer les données brutes de jeu en comportements mesurables de visée.
 
@@ -175,7 +175,7 @@ Transformer les données brutes de jeu en comportements mesurables de visée.
 ---
 
 <a id="m3--dataset-builder"></a>
-## M3 — Constructeur de jeu de données
+## M3 - Constructeur de jeu de données
 
 Créer une chaîne de traitement reproductible pour générer des jeux de données adaptés à l'apprentissage automatique à partir de plusieurs parties.
 
@@ -203,7 +203,7 @@ L'adaptateur **CS2CD** mappe les étiquettes anonymisées de jeu et de niveau jo
 ---
 
 <a id="m4--anomaly-detection"></a>
-## M4 — Détection d'anomalies
+## M4 - Détection d'anomalies
 
 Construire le premier détecteur de comportement basé sur l'apprentissage automatique sans nécessiter de grandes quantités de données étiquetées sur la fraude.
 
@@ -221,7 +221,7 @@ Construire le premier détecteur de comportement basé sur l'apprentissage autom
 ---
 
 <a id="m5--supervised-detection"></a>
-## M5 — Détection supervisée
+## M5 - Détection supervisée
 
 Former des modèles de classification une fois que des données étiquetées suffisamment fiables deviennent disponibles.
 
@@ -243,7 +243,7 @@ Sur les matchs historiques CS2CD réservés, la Forêt aléatoire atteint un sco
 ---
 
 <a id="m6--demo-analyzer"></a>
-## M6 — Analyseur de démo
+## M6 - Analyseur de démo
 
 * [x] Analyser une démo complète à partir d'une seule commande
 * [x] Analyser chaque joueur dans le match, en conservant les joueurs avec données insuffisantes sans score
@@ -273,7 +273,7 @@ Voir [Résultats et protocole CS2CD](docs/demo_analyzer_memory.fr.md#m6--cs2cd-e
 ---
 
 <a id="m7--temporal-modeling"></a>
-## M7 — Modélisation temporelle
+## M7 - Modélisation temporelle
 
 Étudier si les modèles basés sur des séquences améliorent la détection du comportement.
 
@@ -290,23 +290,44 @@ Tick t+n
 Temporal Model
 ```
 
-* [ ] Définir des séquences de ticks de longueur fixe
-* [ ] Construire un ensemble de données temporel
-* [ ] Mettre en place une base de comparaison temporelle simple
-* [ ] Tester des modèles de réseaux de neurones 1D
-* [ ] Tester des modèles LSTM / GRU
-* [ ] Tester des modèles basés sur des transformateurs
-* [ ] Comparer les modèles temporels aux modèles basés sur des caractéristiques
-* [ ] Mesurer la performance d'inférence
-* [ ] Analyser les séquences qui déclenchent des prédictions
-* [ ] Intégrer le meilleur modèle dans l'Analyseur de démos
+* [x] Définir des séquences de ticks de longueur fixe
+* [x] Construire un ensemble de données temporel
+* [x] Mettre en place une base de comparaison temporelle simple
+* [x] Tester des modèles de réseaux de neurones 1D
+* [x] Tester des modèles LSTM / GRU
+* [x] Tester des modèles basés sur des transformateurs
+* [x] Comparer les modèles temporels aux modèles basés sur des caractéristiques
+* [x] Mesurer la performance d'inférence
+* [x] Analyser les séquences qui déclenchent des prédictions
+* [x] Intégrer le meilleur modèle dans l'Analyseur de démos
 
 **Résultat du milestone** : CS2Guard peut analyser le comportement des joueurs comme des séquences temporelles, et non seulement comme des statistiques agrégées.
+
+### État d'implémentation de M7
+
+Le chemin technique est implémenté : les séquences de 32 ticks deviennent six canaux cinématiques de visée, normalisés depuis le seul split d'entraînement, puis consommés par une baseline logistique aplatie, un CNN, un LSTM, un GRU et un Transformer. L'isolation entraînement/validation/test par match réutilise le test de M5. `cs2guard analyze` peut déjà charger les bundles PyTorch, et les rapports d'occlusion nulle exposent la sensibilité par tick et par canal.
+
+Construire le dataset depuis la racine du dépôt, puis réentraîner uniquement le Transformer dans WSL2 avec ROCm :
+
+```powershell
+.\.venv\Scripts\python.exe demo_analyzer/scripts/build_temporal_dataset.py
+cs2guard analyze match.dem --model demo_analyzer/models/temporal/transformer_v1.pt
+```
+
+```bash
+source ~/.venvs/cs2guard-rocm/bin/activate
+export HSA_ENABLE_DXG_DETECTION=1
+python demo_analyzer/scripts/train_temporal.py --device cuda --models transformer --epochs 5 --m5-model demo_analyzer/models/supervised/random_forest_v1.joblib
+```
+
+L'exécution complète contient 397 480 séquences : 242 996 d'entraînement, 63 315 de validation et 91 169 de test verrouillé. Le Transformer réentraîné sur le RX 7800 XT avec ROCm obtient une PR-AUC joueur-match de validation de **0,7794** et atteint **ROC-AUC 0,8282 / PR-AUC 0,7500** sur les matchs de test M5, contre **0,7779 / 0,6840** pour M5 gelé. Les différences d'un bootstrap apparié de 1 000 tirages par match sont **+0,0503 ROC-AUC [0,0272 ; 0,0766]** et **+0,0660 PR-AUC [0,0376 ; 0,0957]**. Hit@1 reste à 44/64 et Hit@3 à 59/64. Sous WSL2 Ubuntu 24.04, PyTorch 2.9.1 et ROCm 7.2, l'inférence GPU batch 1 mesure 0,520 ms en médiane / 0,951 ms au p95 ; le débit batch 256 est d'environ 239 474 séquences/s.
+
+Ces résultats sont internes et utilisent les matchs de test M5 déjà évalués ; ils ne constituent pas une validation indépendante. Le seuil 0,50 n'est pas validé opérationnellement et les sorties restent des scores d'inspection non calibrés, pas des probabilités ni des preuves de triche.
 
 ---
 
 <a id="m8--awareness-analysis"></a>
-## M8 — Analyse de la conscience
+## M8 - Analyse de la conscience
 
 Étendre la détection comportementale au-delà de l'alignement de la cible pour investiguer la conscience des ennemis.
 
@@ -330,7 +351,7 @@ Interpréter la conscience dans un contexte : les sons, les équipes, les angles
 ---
 
 <a id="m9--real-time-detection-engine"></a>
-## M9 — Engine de détection en temps réel
+## M9 - Engine de détection en temps réel
 
 Adapter la chaîne de traitement de machine learning en mode hors-ligne pour les données de jeu en continu.
 
@@ -371,7 +392,7 @@ Suspicion Score
 ---
 
 <a id="m10--server-side-real-time-anti-cheat"></a>
-## M10 — Anti-détection en temps réel côté serveur
+## M10 - Anti-détection en temps réel côté serveur
 
 Intégrer le moteur de détection dans un environnement côté serveur de CS2.
 

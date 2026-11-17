@@ -3,7 +3,7 @@
 <a id="cs2guard"></a>
 # CS2Guard
 
-**基于机器学习的行为作弊检测系统——用于《反恐精英2》**
+**基于机器学习的行为作弊检测系统--用于《反恐精英2》**
 
 CS2Guard 是一个实验性的机器学习项目，旨在检测《反恐精英2》中的可疑玩家行为。
 
@@ -73,7 +73,7 @@ AI 工具将辅助代码编写、测试、文档和研究工作。架构设计�
 ## 🧠 项目方法
 
 <a id="stage-1--offline-demo-analysis"></a>
-### 阶段 1 — 离线演示分析
+### 阶段 1 - 离线演示分析
 
 离线分析器解析已录制的比赛，提取行为特征，并在无实时约束条件下评估机器学习模型。
 
@@ -97,7 +97,7 @@ Suspicion Score
 ```
 
 <a id="stage-2--real-time-server-side-detection"></a>
-### 阶段 2 — 实时服务器端检测
+### 阶段 2 - 实时服务器端检测
 
 计划中的服务器端系统将把离线流程适配到实时遥测数据中，尽可能复用已有的特征和模型。
 
@@ -135,7 +135,7 @@ Player Suspicion Score
 # 🗺️ 进展路线图
 
 <a id="m1--demo-parsing"></a>
-## M1 — 解析演示功能
+## M1 - 解析演示功能
 
 构建从CS2演示文件中提取结构化游戏数据的基础。
 
@@ -155,7 +155,7 @@ Player Suspicion Score
 ---
 
 <a id="m2--aim-feature-engineering"></a>
-## M2 — 射击行为特征工程
+## M2 - 射击行为特征工程
 
 将原始游戏数据转化为可量化的瞄准行为指标。
 
@@ -175,7 +175,7 @@ Player Suspicion Score
 ---
 
 <a id="m3--dataset-builder"></a>
-## M3 — 数据集构建器
+## M3 - 数据集构建器
 
 创建一个可复现的流程，用于从多个比赛生成适用于机器学习的数据集。
 
@@ -203,7 +203,7 @@ M5评估中强制执行比赛级隔离。玩家隔离依赖于可用身份；CS2
 ---
 
 <a id="m4--anomaly-detection"></a>
-## M4 — 异常检测
+## M4 - 异常检测
 
 构建首个无需大量标注作弊数据的基于机器学习的行为检测器。
 
@@ -221,7 +221,7 @@ M5评估中强制执行比赛级隔离。玩家隔离依赖于可用身份；CS2
 ---
 
 <a id="m5--supervised-detection"></a>
-## M5 — 监督检测
+## M5 - 监督检测
 
 当足够可靠的标注数据可用时，训练分类模型一次。
 
@@ -243,7 +243,7 @@ M5评估中强制执行比赛级隔离。玩家隔离依赖于可用身份；CS2
 ---
 
 <a id="m6--demo-analyzer"></a>
-## M6 — 演示分析器
+## M6 - 演示分析器
 
 * [x] 通过单条命令分析整个演示文件
 * [x] 分析比赛中的每位玩家，保留未获得足够数据的玩家且不生成分数
@@ -273,7 +273,7 @@ M5评估中强制执行比赛级隔离。玩家隔离依赖于可用身份；CS2
 ---
 
 <a id="m7--temporal-modeling"></a>
-## M7 — 时间建模
+## M7 - 时间建模
 
 调查基于序列的机器学习模型是否能提升行为检测能力。
 
@@ -290,23 +290,44 @@ Tick t+n
 Temporal Model
 ```
 
-* [ ] 定义固定长度的帧序列
-* [ ] 构建一个时间序列数据集
-* [ ] 实现一个简单的时序基线模型
-* [ ] 尝试使用1D卷积神经网络模型
-* [ ] 尝试使用LSTM / GRU模型
-* [ ] 尝试使用基于Transformer的模型
-* [ ] 比较时序模型与特征模型的表现
-* [ ] 测量推理性能
-* [ ] 分析哪些序列会触发预测
-* [ ] 将最优模型集成到演示分析器中
+* [x] 定义固定长度的帧序列
+* [x] 构建一个时间序列数据集
+* [x] 实现一个简单的时序基线模型
+* [x] 尝试使用1D卷积神经网络模型
+* [x] 尝试使用LSTM / GRU模型
+* [x] 尝试使用基于Transformer的模型
+* [x] 比较时序模型与特征模型的表现
+* [x] 测量推理性能
+* [x] 分析哪些序列会触发预测
+* [x] 将最优模型集成到演示分析器中
 
 **里程碑成果：** CS2Guard能够将玩家行为视为时间序列而非仅依赖聚合统计信息。
+
+### M7 实现状态
+
+工程路径已经实现：32-tick 序列被转换为六个瞄准运动学通道，仅使用训练集拟合归一化，并供展平逻辑回归基线、CNN、LSTM、GRU 和 Transformer 使用。按比赛隔离的训练/验证/测试划分复用 M5 测试集。`cs2guard analyze` 已能加载 PyTorch bundle，零值遮挡报告可展示每个 tick 和通道的分数敏感度。
+
+从仓库根目录构建数据集，然后在 WSL2 中使用 ROCm 仅重新训练 Transformer：
+
+```powershell
+.\.venv\Scripts\python.exe demo_analyzer/scripts/build_temporal_dataset.py
+cs2guard analyze match.dem --model demo_analyzer/models/temporal/transformer_v1.pt
+```
+
+```bash
+source ~/.venvs/cs2guard-rocm/bin/activate
+export HSA_ENABLE_DXG_DETECTION=1
+python demo_analyzer/scripts/train_temporal.py --device cuda --models transformer --epochs 5 --m5-model demo_analyzer/models/supervised/random_forest_v1.joblib
+```
+
+完整运行包含 397,480 个序列：242,996 个训练序列、63,315 个验证序列和 91,169 个锁定测试序列。使用 ROCm 在 RX 7800 XT 上重新训练的 Transformer，其验证集玩家-比赛 PR-AUC 为 **0.7794**，并在 M5 保留测试比赛上达到 **ROC-AUC 0.8282 / PR-AUC 0.7500**，冻结 M5 为 **0.7779 / 0.6840**。按比赛配对的 1,000 次 bootstrap 差值为 **ROC-AUC +0.0503 [0.0272, 0.0766]** 和 **PR-AUC +0.0660 [0.0376, 0.0957]**。Hit@1 仍为 44/64，Hit@3 为 59/64。在 WSL2 Ubuntu 24.04、PyTorch 2.9.1 和 ROCm 7.2 环境中，GPU batch 1 推理中位数为 0.520 ms、p95 为 0.951 ms；batch 256 吞吐量约为每秒 239,474 个序列。
+
+这些是对已用于 M5 的测试比赛进行的内部结果，并非独立验证。0.50 阈值尚未经过运行验证，输出仍是未校准的检查分数，而不是作弊概率或证据。
 
 ---
 
 <a id="m8--awareness-analysis"></a>
-## M8 — 意识分析
+## M8 - 意识分析
 
 超越瞄准行为，扩展对可疑敌方意识的检测分析。
 
@@ -330,7 +351,7 @@ Temporal Model
 ---
 
 <a id="m9--real-time-detection-engine"></a>
-## M9 — 实时检测引擎
+## M9 - 实时检测引擎
 
 将离线机器学习流程适配到实时游戏数据流中。
 
@@ -371,7 +392,7 @@ Suspicion Score
 ---
 
 <a id="m10--server-side-real-time-anti-cheat"></a>
-## M10 — 服务器端实时反作弊
+## M10 - 服务器端实时反作弊
 
 将检测引擎集成到CS2的服务器端环境中。
 

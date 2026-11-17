@@ -3,3 +3,4 @@ pyarrow
 pytest
 matplotlib
 scikit-learn
+torch

@@ -21,6 +21,8 @@ from cs2guard_demo.analysis import analyze_demo, load_analysis_model, tree_proba
 from cs2guard_demo.cli import main
 from cs2guard_demo.detection import FEATURE_COLUMNS
 from cs2guard_demo.supervised import LABEL_TO_TARGET, save_model_bundle
+from cs2guard_demo.temporal import TEMPORAL_CHANNELS
+from cs2guard_demo.temporal_models import create_temporal_model, save_temporal_bundle
 
 
 class FakeDemoparser:
@@ -191,6 +193,24 @@ def test_analyze_demo_end_to_end(analysis_inputs, tmp_path, monkeypatch):
         pixels = imread(image_path)
         assert pixels.shape[0] > 100 and pixels.shape[1] > 100 and pixels.std() > 0
         assert f"({image_path.name})" in markdown
+
+
+def test_analyze_demo_with_temporal_bundle(analysis_inputs, tmp_path):
+    demo_path, _, _ = analysis_inputs
+    metadata = {
+        "model_family": "temporal", "model_name": "cnn1d", "version": "v1", "architecture": "cnn1d",
+        "hidden_size": 32, "channels": TEMPORAL_CHANNELS, "window_size": 32, "tick_rate": 64.0,
+        "normalization": {"mean": [0.0] * 6, "scale": [1.0] * 6},
+        "label_mapping": LABEL_TO_TARGET, "decision_threshold": None,
+    }
+    model_path, _ = save_temporal_bundle(create_temporal_model("cnn1d"), metadata, tmp_path / "models" / "cnn1d_v1.pt")
+    report = analyze_demo(demo_path, model_path, tmp_path / "temporal_analysis", review_plots=False)
+    assert report["model"]["family"] == "temporal"
+    assert report["model"]["features"] == TEMPORAL_CHANNELS
+    assert report["summary"]["window_count"] == 4
+    assert all(window["model_contributions"] is None for window in report["windows"])
+    assert all(window["temporal_importance"]["method"] == "zero_occlusion" for window in report["windows"])
+    assert all(len(window["temporal_importance"]["steps"]) == 32 for window in report["windows"])
 
 
 def test_ranking_ties_and_reproducibility(analysis_inputs, tmp_path):
