@@ -96,7 +96,7 @@ def run_isolation_forest(
 
     scored = df.copy()
     scored["anomaly_score"] = -model.decision_function(scaled_features)
-    scored["is_anomaly"] = model.predict(scaled_features) == -1
+    scored["is_anomaly"] = scored["anomaly_score"] > 0
 
     return scored, aggregate_player_scores(scored)
 

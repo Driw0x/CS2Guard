@@ -1,3 +1,4 @@
+import math
 import random
 import pandas as pd
 VALID_SPLITS = {'train', 'validation', 'test'}
@@ -5,6 +6,9 @@ VALID_SPLITS = {'train', 'validation', 'test'}
 
 def _validate_split_ratios(train_ratio: float, validation_ratio: float, test_ratio: float) -> None:
     ratios = [train_ratio, validation_ratio, test_ratio]
+
+    if any(not math.isfinite(ratio) for ratio in ratios):
+        raise ValueError('Split ratios must be finite.')
 
     if any((ratio < 0.0 for ratio in ratios)):
         raise ValueError('Split ratios cannot be negative.')
@@ -34,10 +38,10 @@ def build_leakage_groups(dataset: pd.DataFrame) -> pd.Series:
     def find(node):
         parent.setdefault(node, node)
 
-        if parent[node] != node:
-            parent[node] = find(parent[node])
-
-        return parent[node]
+        while parent[node] != node:
+            parent[node] = parent[parent[node]]
+            node = parent[node]
+        return node
 
     def union(first, second):
         first_root = find(first)
@@ -97,6 +101,9 @@ def validate_no_data_leakage(dataset: pd.DataFrame) -> None:
 
     if missing_columns:
         raise ValueError(f'Missing leakage validation columns: {sorted(missing_columns)}')
+
+    if dataset[list(required_columns)].isna().any().any():
+        raise ValueError('Leakage validation columns cannot contain missing values.')
 
     invalid_splits = set(dataset['split'].dropna()) - VALID_SPLITS
 

@@ -327,6 +327,26 @@ def test_create_dataset_splits():
     validate_no_data_leakage(split_dataset)
 
 
+def test_leakage_groups_handle_long_shared_player_chain():
+    dataset = pd.DataFrame({'match_id': [f'match_{i}' for i in range(1500)], 'steamid': [1] * 1500})
+    assert build_leakage_groups(dataset).nunique() == 1
+
+
+@pytest.mark.parametrize('ratio', [float('nan'), float('inf'), float('-inf')])
+def test_nonfinite_split_ratios_are_rejected(ratio):
+    dataset = pd.DataFrame({'match_id': ['match_a'], 'steamid': [1]})
+    with pytest.raises(ValueError, match='finite'):
+        create_dataset_splits(dataset, train_ratio=ratio)
+
+
+@pytest.mark.parametrize('column', ['match_id', 'steamid', 'split'])
+def test_leakage_validation_rejects_missing_values(column):
+    dataset = pd.DataFrame({'match_id': ['match_a'], 'steamid': [1], 'split': ['train']})
+    dataset[column] = None
+    with pytest.raises(ValueError, match='missing values'):
+        validate_no_data_leakage(dataset)
+
+
 def test_match_never_crosses_splits():
     rows = []
 

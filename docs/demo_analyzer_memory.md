@@ -1573,6 +1573,7 @@ M5 provides the supervised model used by the offline Demo Analyzer in M6.
 
 ---
 
+<a id="m6--demo-analyzer"></a>
 # M6 - Demo Analyzer
 
 ## Initial audit scope and reference state - 2026-10-14
@@ -2059,6 +2060,7 @@ remain presumed; score concentration is observed on this sample; threshold flags
 are measured descriptively; distribution differences are observable; external
 cheater detection, calibration and generalization remain **unvalidated**.
 
+<a id="m6--cs2cd-evaluation-2026-10-15"></a>
 # M6 - CS2CD evaluation (2026-10-15)
 
 ## Data, provenance and executed protocol

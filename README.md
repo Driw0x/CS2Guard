@@ -39,11 +39,11 @@ A fresh clone includes model metadata, but no trained model or demos: `.joblib` 
 * [Project Goals](#-project-goals)
 * [Project Approach](#-project-approach)
 * [Quick Start](#quick-start)
-* [Roadmap](#️-roadmap)
-* [Project Architecture](#️-project-architecture)
-* [Tech Stack](#️-tech-stack)
+* [Roadmap](#roadmap)
+* [Project Architecture](#project-architecture)
+* [Tech Stack](#tech-stack)
 * [Detection Strategy](#-detection-strategy)
-* [Research Challenges](#️-research-challenges)
+* [Research Challenges](#research-challenges)
 * [Documentation / Technical Memory](#documentation--technical-memory)
 
 ---
@@ -124,6 +124,7 @@ Player Suspicion Score
 
 ---
 
+<a id="roadmap"></a>
 # 🗺️ Roadmap
 
 ## M1 - Demo Parsing
@@ -428,6 +429,7 @@ Integrate the detection engine into a CS2 server-side environment.
 
 ---
 
+<a id="project-architecture"></a>
 # 🏗️ Project Architecture
 
 ```text
@@ -477,6 +479,7 @@ Server Stream ───┘
 
 ---
 
+<a id="tech-stack"></a>
 # 🛠️ Tech Stack
 
 ## Currently used
@@ -535,6 +538,7 @@ Additional behavioral scores and their combination remain future research.
 
 ---
 
+<a id="research-challenges"></a>
 # ⚠️ Research Challenges
 
 * **False positives and skill:** unusual mechanics can be legitimate; compare players across skill levels and aggregate evidence over time.
